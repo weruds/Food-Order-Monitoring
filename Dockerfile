@@ -31,6 +31,8 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # Suppress "Can't open display" by pointing to Xvfb
 ENV DISPLAY=:99
+# Hardcode port so Railway proxy knows where to route traffic
+ENV PORT=8080
 
 WORKDIR /app
 
