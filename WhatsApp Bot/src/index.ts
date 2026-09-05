@@ -36,7 +36,7 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    protocolTimeout: 60000,
+    protocolTimeout: 120000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -44,9 +44,13 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
+      '--single-process',
       '--disable-gpu',
       '--disable-extensions',
       '--disable-background-networking',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
       '--disable-sync',
       '--metrics-recording-only',
       '--disable-default-apps',
