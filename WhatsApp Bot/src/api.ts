@@ -95,7 +95,8 @@ You can view them on Food Committee Assignment Tab
     res.json({ status: 'ok', bot: (client as any).info ? 'connected' : 'not ready' });
   });
 
-  app.listen(API_PORT, () => {
-    console.log(`[API] HTTP server listening on http://localhost:${API_PORT}`);
+  // Bind to 0.0.0.0 so Railway's proxy can reach the container (not just localhost)
+  app.listen(API_PORT, '0.0.0.0', () => {
+    console.log(`[API] HTTP server listening on 0.0.0.0:${API_PORT}`);
   });
 }
