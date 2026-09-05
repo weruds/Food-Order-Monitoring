@@ -3072,18 +3072,7 @@
           <div class="section-subtitle">Track food orders and confirmations across service lines</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <!-- Meal type dropdown -->
-          <div style="position:relative;display:inline-block;" id="meal-type-dropdown-wrap">
-            <button class="btn btn-ghost btn-sm" id="meal-type-btn" onclick="toggleMealTypeDropdown()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
-              <span id="meal-type-label">Set Dish Lunch</span>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4"/></svg>
-            </button>
-            <div id="meal-type-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:200;min-width:160px;overflow:hidden;">
-              <button onclick="chooseMealType('set','Set Dish Lunch')" class="meal-type-opt" id="mto-set">🍱 Set Dish Lunch</button>
-              <button onclick="chooseMealType('2dish','2 Dish Lunch')" class="meal-type-opt" id="mto-2dish">🍽️ 2 Dish Lunch</button>
-              <button onclick="chooseMealType('complete','Complete Lunch')" class="meal-type-opt" id="mto-complete">🥘 Complete Lunch</button>
-            </div>
-          </div>
+          <span id="meal-type-label" style="font-size:12px;font-weight:700;color:var(--muted);padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);">Set Dish Lunch</span>
           <button class="btn btn-sm admin-only" id="wa-notify-btn" onclick="sendFoodReadyNotification()" title="Notify WhatsApp group that distribution is good to go" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
             Distribution Good to Go!
@@ -5792,40 +5781,15 @@ let _mealType = 'set';
 
 function setMealType(type) {
   _mealType = type;
+  // Sync the read-only label on Monitor page
+  const lbl = document.getElementById('meal-type-label');
+  if (lbl) lbl.textContent = _mealType === 'set' ? '🍱 Set Dish Lunch'
+    : _mealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
   // Reset all filters when meal type changes
   _foodFilters = {};
   renderActivities();
+  if (currentPage === 'fc-assignments') renderFcAssignments();
 }
-
-function toggleMealTypeDropdown() {
-  const menu = document.getElementById('meal-type-menu');
-  if (!menu) return;
-  const open = menu.style.display === 'block';
-  menu.style.display = open ? 'none' : 'block';
-  if (!open) {
-    ['set','2dish','complete'].forEach(t => {
-      const el = document.getElementById('mto-' + t);
-      if (el) el.classList.toggle('active', t === _mealType);
-    });
-  }
-}
-
-function chooseMealType(type, label) {
-  const lbl = document.getElementById('meal-type-label');
-  if (lbl) lbl.textContent = label;
-  const menu = document.getElementById('meal-type-menu');
-  if (menu) menu.style.display = 'none';
-  setMealType(type);
-}
-
-// Close meal dropdown when clicking outside
-document.addEventListener('click', e => {
-  const wrap = document.getElementById('meal-type-dropdown-wrap');
-  if (wrap && !wrap.contains(e.target)) {
-    const menu = document.getElementById('meal-type-menu');
-    if (menu) menu.style.display = 'none';
-  }
-});
 
 // ── FC Assignments state ──
 let _fcaSelectedMember = null;
@@ -5857,11 +5821,11 @@ function renderFcAssignments() {
   const allOrders = activity ? getActivityFoodOrders(activity) : [];
   const assignments = (activity && activity.distributionAssignments) || {};
 
-  // Build per-member order lists based on distributionAssignments:
-  // An order belongs to a member if assignments[meatKey(order.option)] === member.name
+  // Build per-member order lists based on distributionAssignments.
+  // Uses orderKey (meal-type-aware) so the same meal type selected on Survey Results applies here.
   function ordersForMember(memberName) {
     return allOrders.filter(o => {
-      const key = meatKey(o.option);
+      const key = orderKey(o);
       return assignments[key] === memberName;
     });
   }
@@ -5924,7 +5888,7 @@ function renderFcAssignments() {
             <div class="fca-card-dept">${(order.dept || 'Other').replace('SEET - ','')}</div>
           </div>
         </div>
-        <div class="fca-card-option">${order.option}</div>
+        <div class="fca-card-option">${orderKey(order)}</div>
       </div>`).join('')}`;
 }
 
@@ -5938,9 +5902,9 @@ function notifyFcaMember(activityId, memberName) {
   if (!activity || !memberName) return;
   const allOrders = getActivityFoodOrders(activity);
   const assignments = activity.distributionAssignments || {};
-  const myOrders = allOrders.filter(o => assignments[meatKey(o.option)] === memberName);
+  const myOrders = allOrders.filter(o => assignments[orderKey(o)] === memberName);
   if (!myOrders.length) { showToast('No orders assigned to this member yet.'); return; }
-  const orderLines = myOrders.map(o => `• ${o.name}: ${o.option}`).join('\n');
+  const orderLines = myOrders.map(o => `• ${o.name}: ${orderKey(o)}`).join('\n');
   const message = `Hi ${memberName}, you are assigned to distribute the following ${myOrders.length} order${myOrders.length!==1?'s':''}:\n\n${orderLines}\n\nPlease proceed to the distribution area.`;
   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
 }
@@ -7260,6 +7224,9 @@ function chooseSrMealType(type, label) {
   if (lbl) lbl.textContent = label;
   const menu = document.getElementById('sr-meal-type-menu');
   if (menu) menu.style.display = 'none';
+  // Drive Monitor and FC Assignments to the same meal type
+  setMealType(type);
+  if (currentPage === 'fc-assignments') renderFcAssignments();
   _renderSurveyResultsFromCache();
 }
 
