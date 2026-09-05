@@ -4124,7 +4124,7 @@
         </div>
         <div class="form-group" id="person-contact-group">
           <label class="form-label">Contact</label>
-          <input class="form-input" id="person-contact" placeholder="e.g. 09171234567" />
+          <input class="form-input" id="person-contact" placeholder="e.g. 639171234567 (include country code, no +)" />
         </div>
       </div>
       <div class="form-group" id="person-email-group">
@@ -5903,7 +5903,7 @@ function notifyFcaMember(activityId, memberName) {
   const allOrders = getActivityFoodOrders(activity);
   const assignments = activity.distributionAssignments || {};
   const myOrders = allOrders.filter(o => assignments[orderKey(o)] === memberName);
-  if (!myOrders.length) { showToast('No orders assigned to this member yet.'); return; }
+  if (!myOrders.length) { showToast('⚠️ No orders assigned to this member yet.'); return; }
 
   // Find phone number from People list
   const person = (state.people || []).find(p =>
@@ -5911,36 +5911,28 @@ function notifyFcaMember(activityId, memberName) {
   );
   const phone = ((person && person.contact) || '').replace(/\D/g, '');
 
-  const message =
-`Hi ${memberName}, There are Food Orders currently assigned to you for Distribution in the Dashboard.
-
-You can view them on Food Committee Assignment Tab
-
--admin`;
-
-  // Try the local WhatsApp bot first; fall back to wa.me if bot unreachable
-  if (phone) {
-    fetch(`${WA_BOT_URL}/notify-assignee`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-secret': WA_BOT_SECRET },
-      body: JSON.stringify({ phone, name: memberName }),
-    })
-    .then(r => {
-      if (r.ok) {
-        showToast(`✅ WhatsApp message sent to ${memberName}`);
-      } else {
-        // Bot reachable but errored — fall back to wa.me
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
-      }
-    })
-    .catch(() => {
-      // Bot not running — fall back to wa.me
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
-    });
-  } else {
-    // No phone stored — open wa.me picker
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+  if (!phone) {
+    showToast(`⚠️ No phone number saved for ${memberName}. Add it in the People tab.`);
+    return;
   }
+
+  fetch(`${WA_BOT_URL}/notify-assignee`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-secret': WA_BOT_SECRET },
+    body: JSON.stringify({ phone, name: memberName }),
+  })
+  .then(r => {
+    if (r.ok) {
+      showToast(`✅ WhatsApp message sent to ${memberName}`);
+    } else {
+      r.json().catch(() => ({})).then(body => {
+        showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
+      });
+    }
+  })
+  .catch(() => {
+    showToast('❌ Cannot reach WhatsApp Bot. Make sure it is running on your PC (npm start).');
+  });
 }
 
 // ── Food Order filter state: { activityId: { svc, batch, foodOption } }
@@ -7556,10 +7548,11 @@ function resolveNameFromEmail(name, email) {
 const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDEwOTc3MywiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wM1QxNDo1NTo0NS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.weYA2s4WeknqQ98PEwMExBRmbrZeIheIOLgb10mG_P0';
 
 // ── WhatsApp Bot API ──────────────────────────────────────────────────────────
-// URL of the locally running WhatsApp bot HTTP server.
-// Change the port if you set API_PORT differently in the bot's .env
-const WA_BOT_URL    = 'http://localhost:3333';
-const WA_BOT_SECRET = 'your-secret-here'; // must match API_SECRET in bot .env
+// After deploying to Railway, replace the URL below with your Railway public URL.
+// Example: 'https://whatsapp-bot-production-xxxx.up.railway.app'
+// For local use only: change back to 'http://localhost:3333'
+const WA_BOT_URL    = 'https://whatsapp-bot-production-xxxx.up.railway.app';
+const WA_BOT_SECRET = 'odc-seet-wa-bot-2026'; // must match API_SECRET in Railway env vars
 const MONDAY_BOARD_ID  = '18429833290'; // Food Survey Board
 
 // Column IDs for the Food Survey Board
@@ -7702,13 +7695,6 @@ function resetSurveyData() {
 // WHATSAPP NOTIFICATION
 // ──────────────────────────────────────────────
 function sendFoodReadyNotification() {
-  const message =
-`Hi Team, Food is now ready for Distribution. Please check your assignments and distribute in an orderly manner.
-
--admin`;
-
-  // Try the local WhatsApp bot first (sends directly to FOOD_GROUP_ID);
-  // fall back to wa.me group picker if bot is not running.
   fetch(`${WA_BOT_URL}/notify-group`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-secret': WA_BOT_SECRET },
@@ -7717,12 +7703,13 @@ function sendFoodReadyNotification() {
     if (r.ok) {
       showToast('✅ Group notified via WhatsApp!');
     } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+      r.json().catch(() => ({})).then(body => {
+        showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
+      });
     }
   })
   .catch(() => {
-    // Bot not running — fall back to manual wa.me
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+    showToast('❌ Cannot reach WhatsApp Bot. Make sure it is running on your PC (npm start).');
   });
 }
 

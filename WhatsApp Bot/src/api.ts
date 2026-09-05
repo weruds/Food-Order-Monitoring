@@ -1,6 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { Client } from 'whatsapp-web.js';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -14,11 +16,20 @@ export function startApi(client: Client): void {
   // ── CORS — allow the Firebase hosted dashboard to call this local server ─────
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-secret');
     if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
     next();
   });
+
+  // ── Serve dashboard locally (avoids mixed-content issues) ────────────────────
+  // index.html lives two levels up from WhatsApp Bot/
+  const dashboardPath = path.resolve(__dirname, '..', '..', '..', 'index.html');
+  if (fs.existsSync(dashboardPath)) {
+    app.get('/', (_req: Request, res: Response) => res.sendFile(dashboardPath));
+    app.get('/index.html', (_req: Request, res: Response) => res.sendFile(dashboardPath));
+    console.log(`[API] Dashboard available at http://localhost:${API_PORT}/`);
+  }
 
   // ── Auth middleware ───────────────────────────────────────────────────────────
   function auth(req: Request, res: Response, next: NextFunction): void {

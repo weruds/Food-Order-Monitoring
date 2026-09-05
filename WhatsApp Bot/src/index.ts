@@ -40,26 +40,41 @@ client.on('ready', () => {
   console.log('[WhatsApp] Client is ready!');
   startApi(client);
 
-  // Log all group IDs after boot so you can copy FOOD_GROUP_ID into .env
-  setTimeout(() => {
-    client.getChats().then(chats => {
-      const groups = chats.filter(c => c.isGroup);
-      if (groups.length) {
-        console.log('\n[Setup] Group chats found (copy your food group ID to .env):');
-        groups.forEach(g => console.log(`  "${g.name}"  →  ${(g as any).id._serialized}`));
-        console.log('');
-      }
-    }).catch(() => {
-      console.log('[Setup] Could not list groups yet — send any message in a group to see its ID logged.');
-    });
-  }, 5000);
+  // Retry getChats() up to 5 times with increasing delays
+  function tryListGroups(attempt: number): void {
+    const delay = attempt * 5000; // 5s, 10s, 15s, 20s, 25s
+    setTimeout(() => {
+      client.getChats().then(chats => {
+        const groups = chats.filter(c => c.isGroup);
+        if (groups.length) {
+          console.log('\n[Setup] Group chats found — copy your FOOD_GROUP_ID to .env:');
+          groups.forEach(g => console.log(`  "${g.name}"  →  ${(g as any).id._serialized}`));
+          console.log('');
+        } else if (attempt < 5) {
+          tryListGroups(attempt + 1);
+        } else {
+          console.log('[Setup] No groups found after retries — send any message in a group to see its ID logged.');
+        }
+      }).catch(() => {
+        if (attempt < 5) tryListGroups(attempt + 1);
+      });
+    }, delay);
+  }
+  tryListGroups(1);
 });
 
-// ── Log group IDs from incoming messages too ──────────────────────────────────
+// ── Log group IDs from ALL group messages (including your own) ────────────────
 client.on('message', (msg) => {
-  if (msg.from === 'status@broadcast' || msg.fromMe) return;
+  if (msg.from === 'status@broadcast') return;
   if (msg.from.endsWith('@g.us') && !process.env.FOOD_GROUP_ID) {
     console.log(`[Group ID] ${msg.from}  ← copy this to FOOD_GROUP_ID in .env`);
+  }
+});
+
+client.on('message_create', (msg) => {
+  if (msg.from === 'status@broadcast') return;
+  if (msg.fromMe && msg.to.endsWith('@g.us') && !process.env.FOOD_GROUP_ID) {
+    console.log(`[Group ID] ${msg.to}  ← copy this to FOOD_GROUP_ID in .env`);
   }
 });
 
