@@ -2,8 +2,24 @@ import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
 import { startApi } from './api';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
+
+// ── Clear stale Chromium lock files on startup ────────────────────────────────
+// Prevents "browser already running" crash after an unclean container shutdown.
+const sessionDir = path.resolve(
+  process.env.SESSION_DATA_PATH ?? './.wwebjs_auth',
+  'session-wa-bot'
+);
+['SingletonLock', 'SingletonCookie', 'SingletonSocket'].forEach(f => {
+  const p = path.join(sessionDir, f);
+  if (fs.existsSync(p)) {
+    fs.rmSync(p);
+    console.log(`[Boot] Removed stale lock: ${f}`);
+  }
+});
 
 // ── WhatsApp Client ───────────────────────────────────────────────────────────
 const client = new Client({
