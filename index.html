@@ -5904,9 +5904,23 @@ function notifyFcaMember(activityId, memberName) {
   const assignments = activity.distributionAssignments || {};
   const myOrders = allOrders.filter(o => assignments[orderKey(o)] === memberName);
   if (!myOrders.length) { showToast('No orders assigned to this member yet.'); return; }
-  const orderLines = myOrders.map(o => `• ${o.name}: ${orderKey(o)}`).join('\n');
-  const message = `Hi ${memberName}, you are assigned to distribute the following ${myOrders.length} order${myOrders.length!==1?'s':''}:\n\n${orderLines}\n\nPlease proceed to the distribution area.`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+
+  const message =
+`Hi ${memberName}, There are Food Orders currently assigned to you for Distribution in the Dashboard.
+
+You can view them on Food Committee Assignment Tab
+
+-admin`;
+
+  // Try to find the assignee's phone number from People list for direct messaging
+  const person = (state.people || []).find(p =>
+    (p.name || '').trim().toLowerCase() === memberName.trim().toLowerCase()
+  );
+  const phone = (person && person.contact || '').replace(/\D/g, '');
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank', 'noopener');
 }
 
 // ── Food Order filter state: { activityId: { svc, batch, foodOption } }
@@ -7662,7 +7676,12 @@ function resetSurveyData() {
 // WHATSAPP NOTIFICATION
 // ──────────────────────────────────────────────
 function sendFoodReadyNotification() {
-  const message = 'Distribution is good to go! Please proceed to the distribution area.';
+  const message =
+`Hi Team, Food is now ready for Distribution. Please check your assignments and distribute in an orderly manner.
+
+-admin`;
+
+  // Opens WhatsApp with pre-filled message — select your group chat in WhatsApp
   window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
 }
 
