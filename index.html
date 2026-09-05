@@ -7664,11 +7664,21 @@ function syncFromMonday() {
 }
 
 function resetSurveyData() {
-  if (!confirm('Reset all survey data? This will clear every synced response from the charts. You can re-sync from Monday at any time.')) return;
+  if (!confirm('Reset all survey data? This will clear all synced food orders from the dashboard. You can re-sync from Monday at any time.')) return;
   if (!_fbDb) { showToast('Not connected to Firestore.'); return; }
+
+  // Immediately wipe local state so the page clears without waiting for Firestore
+  _srResponsesCache = null;
+  if (state.activities && state.activities[0]) {
+    state.activities[0].foodOrders = [];
+    state.activities[0].distributionAssignments = {};
+    saveState();
+  }
+  const body = document.getElementById('survey-results-body');
+  if (body) body.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:40px 0;text-align:center;">Dashboard cleared. Sync from Monday to reload.</div>`;
+
   _fbDb.collection('survey').doc('engagement_survey').delete()
     .then(() => {
-      _srResponsesCache = null;
       loadSidebarSurveyResults();
       if (currentPage === 'survey-results') renderSurveyResultsPage();
       showToast('Survey data cleared. Sync from Monday to reload.');
