@@ -47,8 +47,12 @@ const client = new Client({
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
 client.on('qr', (qr) => {
-  console.log('\n[Auth] Scan this QR code with WhatsApp:\n');
-  qrcode.generate(qr, { small: true });
+  // ASCII QR is unreadable in Railway's log viewer — print a scannable URL instead
+  const encoded = encodeURIComponent(qr);
+  console.log('\n[Auth] ══════════════════════════════════════════════');
+  console.log('[Auth] Open this URL in your browser to scan the QR:');
+  console.log(`[Auth] https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}`);
+  console.log('[Auth] ══════════════════════════════════════════════\n');
 });
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
