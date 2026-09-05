@@ -7495,7 +7495,8 @@ const MONDAY_BOARD_ID  = '18429833290'; // Food Survey Board
 const MONDAY_COL_IDS = [
   'emailjefgq3je',        // Email
   'single_selectw3y6kdg', // Service Line
-  'multi_selecttgo7p9s2', // Select your preferred Dish  (food option / meat)
+  'single_select803v38p', // Select your preferred Meal from the Menu
+  'multi_selecttgo7p9s2', // Select your preferred Dish
   'multi_select31gcf0e9', // Select your preferred Veggie
   'single_selectktzksgz', // Select your Side Dish
   'single_select0h7er2i', // Select your Dessert
@@ -7503,11 +7504,12 @@ const MONDAY_COL_IDS = [
 
 // Builds a human-readable food-option label from a row's column values
 function buildFoodOption(cols) {
+  const meal   = cols['single_select803v38p'] || '';
   const dish   = cols['multi_selecttgo7p9s2'] || '';
   const veggie = cols['multi_select31gcf0e9'] || '';
   const side   = cols['single_selectktzksgz'] || '';
   const des    = cols['single_select0h7er2i'] || '';
-  const parts  = [dish, veggie, side, des].filter(Boolean);
+  const parts  = [meal, dish, veggie, side, des].filter(Boolean);
   return parts.length ? parts.join(' + ') : 'Food Option 1';
 }
 
