@@ -6,7 +6,8 @@ import fs from 'fs';
 
 dotenv.config();
 
-const API_PORT   = parseInt(process.env.API_PORT   ?? '3333', 10);
+// Railway injects PORT dynamically; fall back to API_PORT or 3333 for local use
+const API_PORT   = parseInt(process.env.PORT ?? process.env.API_PORT ?? '3333', 10);
 const API_SECRET = process.env.API_SECRET ?? '';
 
 export function startApi(client: Client): void {
