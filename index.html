@@ -2534,20 +2534,39 @@
   .sq-queue-wrap {
     padding: 12px 0 32px;
     overflow-x: auto;
+    width: 100%;
+  }
+  .sq-queue-container {
+    display: flex;
+    flex-direction: column;
+    width: max-content;
+    min-width: 100%;
+    align-items: flex-start;
   }
   .sq-queue-row {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
     gap: 0;
     margin-bottom: 0;
   }
   .sq-queue-row.sq-reverse {
-    justify-content: flex-end;
+    /* items in DOM are placed right-to-left in column slots */
   }
-  .sq-queue-box {
+  .sq-cell-slot {
     flex-shrink: 0;
     width: 170px;
+    min-height: 80px;
+    display: flex;
+  }
+  .sq-arrow-slot {
+    flex-shrink: 0;
+    width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sq-queue-box {
+    width: 100%;
     min-height: 80px;
     background: var(--surface);
     border: 2.5px solid var(--accent);
@@ -2597,12 +2616,11 @@
   }
   /* arrows */
   .sq-arrow {
-    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 52px;
+    width: 100%;
     gap: 2px;
   }
   .sq-arrow-label {
@@ -2621,7 +2639,8 @@
   .sq-connector-wrap {
     display: flex;
     align-items: flex-start;
-    height: 52px;
+    height: 48px;
+    margin: 4px 0;
   }
   .sq-connector-line {
     display: flex;
@@ -3210,7 +3229,11 @@
           <div class="section-title">People</div>
           <div class="section-subtitle">Employee list across SEET service lines</div>
         </div>
-        <div id="people-header-actions" style="display:flex;gap:8px;"></div>
+        <div id="people-header-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-ghost admin-only" onclick="importPeopleFromSurvey()" title="Import unique names from survey responses">Import from Survey</button>
+          <button class="btn btn-ghost admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="resetPeopleList()" title="Reset (clear) the entire People list">Reset List</button>
+          <button class="btn btn-primary admin-only" onclick="openAddPersonModal()">＋ Add Person</button>
+        </div>
       </div>
       <div class="people-filter-row" id="people-filter-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;" id="people-list"></div>
@@ -10480,49 +10503,71 @@ function renderSchedule() {
     rows.push(groups.slice(i, i + COLS_PER_ROW));
   }
 
-  let html = statsHtml + '<div class="sq-queue-wrap">';
+  let html = statsHtml + '<div class="sq-queue-wrap"><div class="sq-queue-container">';
+
+  const boxW = 170, arrowW = 52;
+  const totalW = COLS_PER_ROW * boxW + (COLS_PER_ROW - 1) * arrowW;
 
   rows.forEach((row, rowIdx) => {
     const isReverse = rowIdx % 2 === 1;
-    const displayRow = isReverse ? [...row].reverse() : row;
-    const rowStartIdx = rowIdx * COLS_PER_ROW;
 
-    html += `<div class="sq-queue-row${isReverse ? ' sq-reverse' : ''}">`;
+    html += `<div class="sq-queue-row">`;
 
-    displayRow.forEach((g, colIdx) => {
-      const globalIdx = isReverse
-        ? rowStartIdx + (row.length - 1 - colIdx)
-        : rowStartIdx + colIdx;
-      const isCurrent  = !!status.current  && g.id === status.current.id;
-      const isPrevious = !!status.previous && g.id === status.previous.id;
-      const isLast = colIdx === displayRow.length - 1;
-      const memberCount = (g.members || []).length;
+    // Always render fixed COLS_PER_ROW slots (0 to 4) so columns strictly align vertically
+    for (let c = 0; c < COLS_PER_ROW; c++) {
+      // If forward row: item at col c is row[c]
+      // If reverse row: item at col (COLS_PER_ROW - 1 - c) is row[c], so slot c has row[(COLS_PER_ROW - 1) - c]
+      const groupInSlot = isReverse
+        ? (COLS_PER_ROW - 1 - c < row.length ? row[COLS_PER_ROW - 1 - c] : null)
+        : (c < row.length ? row[c] : null);
 
-      html += `
-        <div class="sq-queue-box${isCurrent ? ' sq-current' : ''}" onclick="openSqGroup('${g.id}')">
-          ${isCurrent ? '<div class="sq-queue-box-badge">▶ Current</div>' : isPrevious ? '<div class="sq-queue-box-badge" style="background:var(--muted);">Previous</div>' : ''}
-          <div class="sq-queue-box-name">${g.name}</div>
-          <div class="sq-queue-box-date">📅 ${fmtWed(g.date)}</div>
-          <div style="font-size:10px;color:var(--muted2);margin-top:2px;">👤 ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+      if (groupInSlot) {
+        const isCurrent  = !!status.current  && groupInSlot.id === status.current.id;
+        const isPrevious = !!status.previous && groupInSlot.id === status.previous.id;
+        const memberCount = (groupInSlot.members || []).length;
+
+        html += `<div class="sq-cell-slot">
+          <div class="sq-queue-box${isCurrent ? ' sq-current' : ''}" onclick="openSqGroup('${groupInSlot.id}')">
+            ${isCurrent ? '<div class="sq-queue-box-badge">▶ Current</div>' : isPrevious ? '<div class="sq-queue-box-badge" style="background:var(--muted);">Previous</div>' : ''}
+            <div class="sq-queue-box-name">${groupInSlot.name}</div>
+            <div class="sq-queue-box-date">📅 ${fmtWed(groupInSlot.date)}</div>
+            <div style="font-size:10px;color:var(--muted2);margin-top:2px;">👤 ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+          </div>
         </div>`;
-
-      if (!isLast) {
-        const arrowIcon = isReverse ? '←' : '→';
-        html += `
-        <div class="sq-arrow">
-          <span class="sq-arrow-label">In Queue</span>
-          <span class="sq-arrow-icon">${arrowIcon}</span>
-        </div>`;
+      } else {
+        html += `<div class="sq-cell-slot" style="visibility:hidden;"></div>`;
       }
-    });
 
-    html += '</div>';
+      // Render horizontal arrow slot between columns
+      if (c < COLS_PER_ROW - 1) {
+        // Arrow between slot c and c+1:
+        // For forward row: show arrow '→' if both slot c and slot c+1 exist
+        // For reverse row: flow goes leftwards (from right to left), show '←' if both slot c and slot c+1 exist
+        const hasArrow = isReverse
+          ? (COLS_PER_ROW - 1 - c < row.length && COLS_PER_ROW - 1 - (c + 1) < row.length)
+          : (c < row.length && c + 1 < row.length);
 
+        const arrowIcon = isReverse ? '←' : '→';
+        if (hasArrow) {
+          html += `<div class="sq-arrow-slot">
+            <div class="sq-arrow">
+              <span class="sq-arrow-label">In Queue</span>
+              <span class="sq-arrow-icon">${arrowIcon}</span>
+            </div>
+          </div>`;
+        } else {
+          html += `<div class="sq-arrow-slot" style="visibility:hidden;"></div>`;
+        }
+      }
+    }
+
+    html += '</div>'; // close sq-queue-row
+
+    // Vertical downward connector between rows:
     if (rowIdx < rows.length - 1) {
-      const arrowSide = isReverse ? 'left' : 'right';
-      const boxW = 170, arrowW = 52;
-      const totalW = COLS_PER_ROW * boxW + (COLS_PER_ROW - 1) * arrowW;
-      const offsetLeft = arrowSide === 'right' ? totalW - boxW : 0;
+      // If previous row was forward (L→R), connector drops down from the far right column (column 4)
+      // If previous row was reverse (R→L), connector drops down from the far left column (column 0)
+      const offsetLeft = isReverse ? 0 : totalW - boxW;
       html += `<div class="sq-connector-wrap" style="width:${totalW}px;">
         <div class="sq-connector-line" style="margin-left:${offsetLeft}px;">
           <span class="sq-arrow-icon">↓</span>
@@ -10532,7 +10577,7 @@ function renderSchedule() {
     }
   });
 
-  html += '</div>'; // close sq-queue-wrap
+  html += '</div></div>'; // close sq-queue-container and sq-queue-wrap
 
   // ── Ungrouped Resources Panel ──
   if (ungrouped.length) {
