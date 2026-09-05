@@ -4642,11 +4642,13 @@ function navigate(page) {
   currentPage = page;
   const addEntry = ADD_LABELS[page];
   const topbarBtn = document.getElementById('topbar-add-btn');
-  if (addEntry) {
-    topbarBtn.style.display = '';
-    topbarBtn.innerHTML = `<span>＋</span> ${addEntry[0]}`;
-  } else {
-    topbarBtn.style.display = 'none';
+  if (topbarBtn) {
+    if (addEntry) {
+      topbarBtn.style.display = '';
+      topbarBtn.innerHTML = `<span>＋</span> ${addEntry[0]}`;
+    } else {
+      topbarBtn.style.display = 'none';
+    }
   }
   renderPage(page);
   closeSidebar(); // auto-close on mobile after navigation
