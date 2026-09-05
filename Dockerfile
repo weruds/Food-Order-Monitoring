@@ -3,7 +3,7 @@
 
 FROM node:20-bookworm-slim
 
-# Install Chromium and its dependencies (Debian 12 / bookworm mirrors are stable)
+# Install Chromium, Xvfb (virtual display), and dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
@@ -22,12 +22,15 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon0 \
     libxrandr2 \
     xdg-utils \
+    xvfb \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Tell Puppeteer to skip bundled Chromium and use the system one
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Suppress "Can't open display" by pointing to Xvfb
+ENV DISPLAY=:99
 
 WORKDIR /app
 
@@ -44,4 +47,5 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 EXPOSE 3333
-CMD ["node", "dist/index.js"]
+# Start Xvfb virtual display then launch the bot
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1024x768x24 -nolisten tcp & sleep 1 && node dist/index.js"]

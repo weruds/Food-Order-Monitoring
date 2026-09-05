@@ -8,18 +8,25 @@ import path from 'path';
 dotenv.config();
 
 // ── Clear stale Chromium lock files on startup ────────────────────────────────
-// Prevents "browser already running" crash after an unclean container shutdown.
-const sessionDir = path.resolve(
-  process.env.SESSION_DATA_PATH ?? './.wwebjs_auth',
-  'session-wa-bot'
-);
-['SingletonLock', 'SingletonCookie', 'SingletonSocket'].forEach(f => {
-  const p = path.join(sessionDir, f);
-  if (fs.existsSync(p)) {
-    fs.rmSync(p);
-    console.log(`[Boot] Removed stale lock: ${f}`);
+// The volume may carry locks from a previous container (different hostname).
+// Wipe every known lock file pattern under the entire auth directory.
+const authRoot = path.resolve(process.env.SESSION_DATA_PATH ?? './.wwebjs_auth');
+function clearLocks(dir: string): void {
+  if (!fs.existsSync(dir)) return;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      clearLocks(full);
+    } else if (
+      ['SingletonLock', 'SingletonCookie', 'SingletonSocket',
+       'lockfile', '.lock'].some(n => entry.name === n || entry.name.endsWith('.lock'))
+    ) {
+      fs.rmSync(full);
+      console.log(`[Boot] Removed stale lock: ${full}`);
+    }
   }
-});
+}
+clearLocks(authRoot);
 
 // ── WhatsApp Client ───────────────────────────────────────────────────────────
 const client = new Client({
