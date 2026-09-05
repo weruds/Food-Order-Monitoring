@@ -2897,7 +2897,7 @@
           <span class="nav-count" id="nav-count-people">0</span>
         </div>
         <div class="nav-item" data-page="fc-assignments">
-          <span class="nav-icon">📋</span> FC Assignments
+          <span class="nav-icon">📋</span> Food Committee Assignments
         </div>
         <div class="nav-item" data-page="survey-results">
           <span class="nav-icon"></span> Survey Results
@@ -4562,7 +4562,7 @@ function openAdminModal() {
     const btn = document.getElementById('admin-lock-btn');
     btn.classList.remove('unlocked');
     btn.innerHTML = '<span id="admin-lock-label">Configure</span>';
-    if (currentPage === 'people') renderPeople();
+    renderPage(currentPage);
     showToast('Dashboard locked');
     return;
   }
@@ -4596,7 +4596,7 @@ function submitAdminPasscode() {
     btn.classList.add('unlocked');
     btn.innerHTML = '<span id="admin-lock-label">Admin Mode</span>';
     closeAdminModal();
-    if (currentPage === 'people') renderPeople();
+    renderPage(currentPage);
     showToast('Admin mode enabled');
   } else {
     const errEl = document.getElementById('admin-error-msg');
@@ -5803,20 +5803,36 @@ function renderFcAssignments() {
     _fcaSelectedMember = members[0].id;
   }
 
-  // Member filter pills
+  // Get all food orders and assignments from the first activity
+  const activity = (state.activities || [])[0];
+  const allOrders = activity ? getActivityFoodOrders(activity) : [];
+  const assignments = (activity && activity.distributionAssignments) || {};
+
+  // Build per-member order lists based on distributionAssignments:
+  // An order belongs to a member if assignments[meatKey(order.option)] === member.name
+  function ordersForMember(memberName) {
+    return allOrders.filter(o => {
+      const key = meatKey(o.option);
+      return assignments[key] === memberName;
+    });
+  }
+
+  const selMember   = members.find(m => m.id === _fcaSelectedMember);
+  const selName     = selMember ? selMember.name : '';
+  const selOrders   = ordersForMember(selName);
+
+  // Member filter pills — show assigned order count badge per member
   filtersEl.innerHTML = `
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">
       <span style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;">Group of the Week:</span>
-      ${members.map(m => `
-        <button class="fca-member-btn${_fcaSelectedMember === m.id ? ' active' : ''}"
+      ${members.map(m => {
+        const cnt = ordersForMember(m.name).length;
+        return `<button class="fca-member-btn${_fcaSelectedMember === m.id ? ' active' : ''}"
           onclick="selectFcaMember('${m.id}')">
-          ${m.name}
-        </button>`).join('')}
+          ${m.name}${cnt ? ` <span style="background:rgba(255,255,255,0.25);border-radius:8px;padding:1px 6px;font-size:10px;">${cnt}</span>` : ''}
+        </button>`;
+      }).join('')}
     </div>`;
-
-  // Get all food orders from the default activity
-  const activity = (state.activities || [])[0];
-  const allOrders = activity ? getActivityFoodOrders(activity) : [];
 
   if (!allOrders.length) {
     gridEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">
@@ -5825,21 +5841,30 @@ function renderFcAssignments() {
     return;
   }
 
-  const selMember = members.find(m => m.id === _fcaSelectedMember);
-  const selName   = selMember ? selMember.name : '';
-
   const avatarColors = ['#4f46e5','#9333ea','#0891b2','#059669','#f59e0b','#ef4444','#ec4899','#06b6d4'];
   const colorOf = (name, offset) => avatarColors[((name || '').charCodeAt(0) + (offset||0)) % avatarColors.length];
 
+  if (!selOrders.length) {
+    gridEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px 0;color:var(--muted);font-size:13px;">
+      No orders assigned to <strong style="color:var(--white);">${selName}</strong> yet.<br>
+      <span style="font-size:12px;color:var(--muted2);">Use "Assign for Distribution" on the Food Orders Monitor page to assign orders.</span>
+    </div>`;
+    return;
+  }
+
   gridEl.innerHTML = `
-    <div style="grid-column:1/-1;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <div style="grid-column:1/-1;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div style="font-size:13px;color:var(--muted);">
         <strong style="color:var(--accent);">${selName}</strong> is handling
-        <strong style="color:var(--white);">${allOrders.length}</strong> order${allOrders.length!==1?'s':''}
+        <strong style="color:var(--white);">${selOrders.length}</strong> order${selOrders.length!==1?'s':''}
       </div>
-      <div style="font-size:11px;color:var(--muted2);">Click a member pill to switch view</div>
+      <button class="btn btn-sm" style="background:#25d366;color:#fff;border:none;font-weight:700;display:flex;align-items:center;gap:6px;"
+        onclick="notifyFcaMember('${activity ? activity.id : ''}','${selName.replace(/'/g,"\\'")}')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
+        Notify ${selName}
+      </button>
     </div>
-    ${allOrders.map(order => `
+    ${selOrders.map(order => `
       <div class="fca-order-card">
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="fca-card-avatar" style="background:linear-gradient(135deg,${colorOf(order.name,0)},${colorOf(order.name,3)});">
@@ -5857,6 +5882,18 @@ function renderFcAssignments() {
 function selectFcaMember(memberId) {
   _fcaSelectedMember = memberId;
   renderFcAssignments();
+}
+
+function notifyFcaMember(activityId, memberName) {
+  const activity = (state.activities || []).find(a => a.id === activityId);
+  if (!activity || !memberName) return;
+  const allOrders = getActivityFoodOrders(activity);
+  const assignments = activity.distributionAssignments || {};
+  const myOrders = allOrders.filter(o => assignments[meatKey(o.option)] === memberName);
+  if (!myOrders.length) { showToast('No orders assigned to this member yet.'); return; }
+  const orderLines = myOrders.map(o => `• ${o.name}: ${o.option}`).join('\n');
+  const message = `Hi ${memberName}, you are assigned to distribute the following ${myOrders.length} order${myOrders.length!==1?'s':''}:\n\n${orderLines}\n\nPlease proceed to the distribution area.`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
 }
 
 // ── Food Order filter state: { activityId: { svc, batch, foodOption } }
@@ -5924,29 +5961,69 @@ function renderFoodOrdersPanel(a) {
   }
 
   const f = _getFoodFilter(a.id);
-
-  // ── For Set Dish Lunch: filter by exact meal/set option (first segment) ──
-  // For 2 Dish Lunch and Complete Lunch: use full 3-tier cascade
+  const assignments = a.distributionAssignments || {};
   const mealTypeLabel = _mealType === 'set' ? '🍱 Set Dish Lunch'
     : _mealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
+  const isSet = _mealType === 'set';
 
-  // Tier 0: meal type pre-filter (for Set Dish only — filter by first part of option)
-  const mealTypeOrders = _mealType === 'set'
-    ? allOrders.filter(o => {
-        const firstSeg = (o.option || '').split(' + ')[0].trim();
-        return firstSeg.toLowerCase().includes('set') || firstSeg.toLowerCase().includes('option');
-      })
-    : allOrders; // for 2dish and complete, show all (no pre-filter)
+  // ── Exclude orders already assigned to a member ──
+  const unassignedOrders = allOrders.filter(o => {
+    const key = meatKey(o.option);
+    return !assignments[key];
+  });
 
-  // ── Tier 1: Service Lines (only those with orders) ──
-  const svcSet = [...new Set(mealTypeOrders.map(o => o.dept || 'Other'))].sort();
-  const svcOrders = f.svc === 'All' ? mealTypeOrders : mealTypeOrders.filter(o => (o.dept || 'Other') === f.svc);
+  // ── SET DISH: skip Service Line & Batch — show Food Options directly ──
+  if (isSet) {
+    const optionCounts = {};
+    unassignedOrders.forEach(o => {
+      const k = meatKey(o.option);
+      optionCounts[k] = (optionCounts[k] || 0) + 1;
+    });
+    const activeOptions = Object.keys(optionCounts).sort();
+    const visible = f.foodOption === 'All' ? unassignedOrders
+      : unassignedOrders.filter(o => meatKey(o.option) === f.foodOption);
+    const selAssignee = f.foodOption !== 'All' ? (assignments[f.foodOption] || '') : '';
 
-  // ── Tier 2: Batches (only shown when a service line is selected; only those with members) ──
+    const tier3Html = activeOptions.length ? `
+      <div class="food-filter-tier" style="border-left:3px solid var(--cyan);padding-left:8px;">
+        <span class="food-filter-tier-label">Food Option</span>
+        <button class="food-filter-btn tier3${f.foodOption==='All'?' active':''}" onclick="setFoodFilterOption('${a.id}','All')">All (${unassignedOrders.length})</button>
+        ${activeOptions.map(opt => `
+          <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
+            ${opt} (${optionCounts[opt]})</button>`).join('')}
+      </div>` : '';
+
+    return `<div class="food-orders-panel" onclick="event.stopPropagation()">
+      <div class="food-orders-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent3);">${mealTypeLabel}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} unassigned order${visible.length!==1?'s':''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          ${allOrders.length ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="clearFoodOrders('${a.id}')">Clear</button>` : ''}
+          ${f.foodOption !== 'All' ? `<button class="btn btn-primary btn-sm admin-only" onclick="openFoodAssigneeModal('${a.id}','${f.foodOption.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
+        </div>
+      </div>
+      ${tier3Html}
+      <div class="food-order-list" style="margin-top:10px;">
+        ${visible.length ? visible.map(order => `<div class="food-order-row">
+          <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
+          <div class="food-order-option">${order.option}</div>
+        </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders for this option.</div>`}
+      </div>
+    </div>`;
+  }
+
+  // ── 2 DISH / COMPLETE: full 3-tier cascade ──
+  const svcSet = [...new Set(unassignedOrders.map(o => o.dept || 'Other'))].sort();
+  const svcOrders = f.svc === 'All' ? unassignedOrders : unassignedOrders.filter(o => (o.dept || 'Other') === f.svc);
   const batchOrders = f.batch === 'All' ? svcOrders : svcOrders.filter(o => _nameBatch(o.name) === f.batch);
   const activeBatches = FOOD_BATCHES.filter(b => svcOrders.some(o => _nameBatch(o.name) === b.label));
 
-  // ── Tier 3: Food Options (only those with count > 0 in current batch scope) ──
   const optionCounts = {};
   batchOrders.forEach(o => {
     const k = meatKey(o.option);
@@ -5956,22 +6033,27 @@ function renderFoodOrdersPanel(a) {
   const visible = f.foodOption === 'All' ? batchOrders
     : batchOrders.filter(o => meatKey(o.option) === f.foodOption);
 
-  const assignments = a.distributionAssignments || {};
-  const assignee = (f.foodOption !== 'All') ? (assignments[f.foodOption] || '') : '';
+  // Assign button scopes: show at Service Line level OR Batch level OR Food Option level
+  const svcAssignKey   = f.svc !== 'All' && f.batch === 'All' && f.foodOption === 'All' ? f.svc : null;
+  const batchAssignKey = f.batch !== 'All' && f.foodOption === 'All' ? `${f.svc}__${f.batch}` : null;
+  const optAssignKey   = f.foodOption !== 'All' ? f.foodOption : null;
 
-  // Tier 1 pills
+  // Tier 1
   const tier1Html = `
     <div class="food-filter-tier">
       <span class="food-filter-tier-label">Service Line</span>
-      <button class="food-filter-btn${f.svc==='All'?' active':''}" onclick="setFoodFilterSvc('${a.id}','All')">All (${allOrders.length})</button>
+      <button class="food-filter-btn${f.svc==='All'?' active':''}" onclick="setFoodFilterSvc('${a.id}','All')">All (${unassignedOrders.length})</button>
       ${svcSet.map(svc => {
-        const cnt = allOrders.filter(o=>(o.dept||'Other')===svc).length;
+        const cnt = unassignedOrders.filter(o=>(o.dept||'Other')===svc).length;
+        const svcKey = svc;
+        const alreadyAssigned = !!assignments[svcKey];
         return `<button class="food-filter-btn${f.svc===svc?' active':''}" onclick="setFoodFilterSvc('${a.id}','${svc.replace(/'/g,"\\'")}')">
           ${svc.replace('SEET - ','')} (${cnt})</button>`;
       }).join('')}
+      ${svcAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${svcAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
     </div>`;
 
-  // Tier 2 pills — only when a specific service line is chosen AND batches exist
+  // Tier 2
   const tier2Html = (f.svc !== 'All' && activeBatches.length) ? `
     <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--purple);">
       <span class="food-filter-tier-label">Batch</span>
@@ -5981,9 +6063,10 @@ function renderFoodOrdersPanel(a) {
         return `<button class="food-filter-btn tier2${f.batch===b.label?' active':''}" onclick="setFoodFilterBatch('${a.id}','${b.label}')">
           ${b.label}: ${b.range} (${cnt})</button>`;
       }).join('')}
+      ${batchAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${batchAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
     </div>` : '';
 
-  // Tier 3 pills — food options with count, only those > 0
+  // Tier 3
   const tier3Html = activeOptions.length ? `
     <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--cyan);">
       <span class="food-filter-tier-label">Food Option</span>
@@ -5991,6 +6074,7 @@ function renderFoodOrdersPanel(a) {
       ${activeOptions.map(opt => `
         <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
           ${opt} (${optionCounts[opt]})</button>`).join('')}
+      ${optAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${optAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
     </div>` : '';
 
   return `<div class="food-orders-panel" onclick="event.stopPropagation()">
@@ -6000,13 +6084,10 @@ function renderFoodOrdersPanel(a) {
           <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
           <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent3);">${mealTypeLabel}</span>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} order${visible.length!==1?'s':''} shown</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} unassigned order${visible.length!==1?'s':''} shown</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
         ${allOrders.length ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="clearFoodOrders('${a.id}')">Clear</button>` : ''}
-        ${assignee ? `<span style="font-size:11px;color:var(--muted);">Assigned to <strong style="color:var(--white);">${assignee}</strong></span>` : ''}
-        ${f.foodOption !== 'All' ? `<button class="btn btn-primary btn-sm admin-only" onclick="openFoodAssigneeModal('${a.id}','${f.foodOption.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
-        ${assignee ? `<button class="btn btn-sm admin-only" style="background:#25d366;color:#fff;border:none;font-weight:700;" onclick="notifyFoodAssignee('${a.id}','${f.foodOption.replace(/'/g,"\\'")}')">Notify Assignee</button>` : ''}
       </div>
     </div>
     ${tier1Html}${tier2Html}${tier3Html}
@@ -6015,7 +6096,7 @@ function renderFoodOrdersPanel(a) {
         <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
         <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
         <div class="food-order-option">${order.option}</div>
-      </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No orders match the selected filters.</div>`}
+      </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders match the selected filters.</div>`}
     </div>
   </div>`;
 }
