@@ -1,12 +1,12 @@
 # Root Dockerfile — builds the WhatsApp Bot from the subfolder
 # Used by Railway since it deploys from repo root
 
-FROM node:20-bullseye-slim
+FROM node:20-bookworm-slim
 
+# Install Chromium and its dependencies (Debian 12 / bookworm mirrors are stable)
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
-    libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
     libcups2 \
@@ -25,19 +25,22 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Tell Puppeteer to skip bundled Chromium and use the system one
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
-# Copy bot source from subfolder
+# Install ALL deps (devDeps needed for TypeScript build)
 COPY "WhatsApp Bot/package*.json" ./
 RUN npm ci
 
+# Compile TypeScript → dist/
 COPY "WhatsApp Bot/tsconfig.json" ./
 COPY "WhatsApp Bot/src/" ./src/
 RUN npm run build
 
+# Drop devDependencies to keep image lean
 RUN npm prune --omit=dev
 
 EXPOSE 3333

@@ -2,13 +2,12 @@
 # Uses a Debian-based Node image that includes the system libraries
 # needed by Puppeteer/Chromium (whatsapp-web.js dependency).
 
-FROM node:20-bullseye-slim
+FROM node:20-bookworm-slim
 
 # Install Chromium system dependencies
 RUN apt-get update && apt-get install -y \
     chromium \
     fonts-liberation \
-    libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
     libcups2 \
