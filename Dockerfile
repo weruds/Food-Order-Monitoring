@@ -40,6 +40,5 @@ RUN npm run build
 
 RUN npm prune --omit=dev
 
-VOLUME ["/app/.wwebjs_auth"]
 EXPOSE 3333
 CMD ["node", "dist/index.js"]

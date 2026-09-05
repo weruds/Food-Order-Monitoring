@@ -45,9 +45,6 @@ RUN npm run build
 # Remove devDependencies after build to keep image lean
 RUN npm prune --omit=dev
 
-# Session data lives in a volume so it survives restarts
-VOLUME ["/app/.wwebjs_auth"]
-
 EXPOSE 3333
 
 CMD ["node", "dist/index.js"]
