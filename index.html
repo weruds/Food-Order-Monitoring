@@ -9497,22 +9497,6 @@ function buildCarDiagram(car) {
       </div>
     </div>`;
 }
-
-
-// ──────────────────────────────────────────────
-// INIT
-// ──────────────────────────────────────────────
-// Boot from localStorage immediately (instant paint)
-if (state.engagement) startCountdown();
-initDate();
-updateCounts();
-navigate(currentPage);
-
-// Then connect Firestore — onSnapshot will refresh the UI once live data arrives
-initFirebase();
-
-// Fallback: re-render after 1.5 s in case Firestore is slow
-setTimeout(() => { if (state.activities && state.activities.length) navigate(currentPage); }, 1500);
 </script>
 
 <script>
@@ -10775,6 +10759,23 @@ function saveSqGroup() {
   <button class="loc-lightbox-nav loc-lightbox-next" onclick="lightboxNav(1)">&#8250;</button>
   <div class="loc-lightbox-counter" id="loc-lightbox-counter"></div>
 </div>
+
+<script>
+// ──────────────────────────────────────────────
+// INIT — runs after ALL script blocks are parsed
+// ──────────────────────────────────────────────
+// Boot from localStorage immediately (instant paint)
+if (state.engagement) startCountdown();
+initDate();
+updateCounts();
+navigate(currentPage);
+
+// Then connect Firestore — onSnapshot will refresh the UI once live data arrives
+initFirebase();
+
+// Fallback: re-render after 1.5 s in case Firestore is slow
+setTimeout(() => { if (state.activities && state.activities.length) navigate(currentPage); }, 1500);
+</script>
 
 </body>
 </html>
