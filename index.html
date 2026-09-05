@@ -6552,16 +6552,17 @@ function removeAttendee(personId) {
 // COUNT BADGES
 // ──────────────────────────────────────────────
 function updateCounts() {
-  document.getElementById('nav-count-activities').textContent = state.activities.length;
-  document.getElementById('nav-count-locations').textContent = state.locations.length;
-  document.getElementById('nav-count-people').textContent = (state.people||[]).length;
-  document.getElementById('nav-count-carseats').textContent = sumAcross('cars');
-  document.getElementById('nav-count-beds').textContent = sumAcross('beds');
-  document.getElementById('nav-count-games').textContent = sumAcross('games');
-  document.getElementById('nav-count-committee').textContent = sumAcross('committees');
-  document.getElementById('nav-count-grocery').textContent = sumAcross('grocery');
-  document.getElementById('nav-count-meals').textContent = sumAcross('meals');
-  document.getElementById('nav-count-expenses').textContent = sumAcross('expenses');
+  const setCount = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setCount('nav-count-activities', state.activities.length);
+  setCount('nav-count-locations',  state.locations.length);
+  setCount('nav-count-people',     (state.people||[]).length);
+  setCount('nav-count-carseats',   sumAcross('cars'));
+  setCount('nav-count-beds',       sumAcross('beds'));
+  setCount('nav-count-games',      sumAcross('games'));
+  setCount('nav-count-committee',  sumAcross('committees'));
+  setCount('nav-count-grocery',    sumAcross('grocery'));
+  setCount('nav-count-meals',      sumAcross('meals'));
+  setCount('nav-count-expenses',   sumAcross('expenses'));
 }
 
 // ──────────────────────────────────────────────
