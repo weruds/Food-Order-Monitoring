@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Food Order Monitoring app — state document
+    match /planner/{docId} {
+      allow read, write: if true;
+    }
+
+    // Survey results (Monday.com sync target)
+    match /survey/{docId} {
+      allow read, write: if true;
+    }
+
+  }
+}

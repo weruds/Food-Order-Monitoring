@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Engagement Planner</title>
+<title>Food Committee Order Monitoring</title>
 <!-- Firebase SDK (compat v10) — Firestore -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -257,26 +257,8 @@
     min-height: 100vh;
   }
 
-  /* ─── TOPBAR ─── */
-  .topbar {
-    position: sticky; top: 0; z-index: 50;
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(99,102,241,0.18);
-    padding: 0 28px;
-    height: 60px;
-    display: flex; align-items: center; justify-content: space-between;
-    box-shadow: 0 2px 16px rgba(79,70,229,0.08);
-  }
-  .topbar::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, #4f46e5, #9333ea, #ec4899, #06b6d4);
-    opacity: 0.7;
-  }
-  .topbar-title { font-size: 18px; font-weight: 800; color: var(--white); }
-  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  /* ─── TOPBAR (hidden) ─── */
+  .topbar { display: none !important; }
 
   /* ─── BUTTONS ─── */
   .btn {
@@ -410,6 +392,16 @@
   }
   .activity-card:hover { border-color: var(--border2); background: var(--surface2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
   .activity-card-body { padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
+  .food-orders-panel { margin: 0 16px 16px; padding: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  .food-orders-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .food-orders-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .food-filter-btn { padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+  .food-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .food-order-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px; }
+  .food-order-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .food-order-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg,var(--accent),var(--purple)); color: #fff; font-size: 12px; font-weight: 700; }
+  .food-order-option { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--accent2); background: var(--accent-glow); border-radius: 12px; padding: 3px 7px; }
+  @media (max-width: 640px) { .food-orders-header { flex-direction: column; } }
   /* ── Theme banners ── */
   .theme-banner {
     width: 100%; height: 88px; flex-shrink: 0; position: relative; overflow: hidden;
@@ -938,10 +930,12 @@
   /* ─── HAMBURGER ─── */
   .hamburger {
     display: none;
+    position: fixed; top: 14px; left: 14px; z-index: 90;
     flex-direction: column; justify-content: center; align-items: center;
-    gap: 5px; width: 36px; height: 36px;
+    gap: 5px; width: 38px; height: 38px;
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: var(--radius-sm); cursor: pointer; flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
   }
   .hamburger span {
     display: block; width: 18px; height: 2px;
@@ -964,9 +958,6 @@
     .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(37,99,235,0.12); }
     .main { margin-left: 0; }
 
-    /* Topbar */
-    .topbar { padding: 0 14px; gap: 10px; }
-    .topbar-title { font-size: 15px; }
     .hamburger { display: flex; }
 
     /* Page padding */
@@ -2301,6 +2292,10 @@
 
   @media (max-width: 768px) {
     .survey-panel { width: 100vw; }
+    #survey-results-body > div[style*="repeat(3,1fr)"],
+    #survey-results-body > div[style*="repeat(2,1fr)"] {
+      grid-template-columns: 1fr !important;
+    }
   }
 
   /* Dashboard 2-column grid collapses on small screens */
@@ -2534,6 +2529,253 @@
     margin-bottom: 12px;
   }
   .day-sched-list { display: flex; flex-direction: column; gap: 0; }
+
+  /* ─── SCHEDULER QUEUE ─── */
+  .sq-queue-wrap {
+    padding: 12px 0 32px;
+    overflow-x: auto;
+  }
+  .sq-queue-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    margin-bottom: 0;
+  }
+  .sq-queue-row.sq-reverse {
+    justify-content: flex-end;
+  }
+  .sq-queue-box {
+    flex-shrink: 0;
+    width: 170px;
+    min-height: 80px;
+    background: var(--surface);
+    border: 2.5px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    transition: box-shadow 0.18s, transform 0.18s, border-color 0.18s;
+    cursor: pointer;
+    position: relative;
+  }
+  .sq-queue-box:hover {
+    border-color: var(--purple);
+    box-shadow: 0 4px 18px rgba(79,70,229,0.18);
+    transform: translateY(-2px);
+  }
+  .sq-queue-box.sq-current {
+    border-color: var(--success);
+    background: rgba(16,185,129,0.07);
+  }
+  .sq-queue-box-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.3;
+  }
+  .sq-queue-box.sq-current .sq-queue-box-name { color: var(--success); }
+  .sq-queue-box-date {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .sq-queue-box-badge {
+    position: absolute;
+    top: -10px; left: 50%; transform: translateX(-50%);
+    background: var(--success);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  /* arrows */
+  .sq-arrow {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    gap: 2px;
+  }
+  .sq-arrow-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted2);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .sq-arrow-icon {
+    font-size: 22px;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  /* vertical connector between rows */
+  .sq-connector-wrap {
+    display: flex;
+    align-items: flex-start;
+    height: 52px;
+  }
+  .sq-connector-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 170px;
+  }
+  .sq-connector-line .sq-arrow-label { margin-top: 2px; }
+  .sq-connector-line .sq-arrow-icon { font-size: 22px; color: var(--accent2); }
+  /* add group btn */
+  .sq-add-btn {
+    flex-shrink: 0;
+    width: 170px;
+    min-height: 80px;
+    background: var(--surface2);
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .sq-add-btn:hover { border-color: var(--accent); background: var(--accent-glow2); color: var(--accent); }
+  .sq-add-btn-icon { font-size: 22px; }
+
+  /* ── Schedule stats bar ── */
+  .sq-stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+  }
+  .sq-stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .sq-stat-val  { font-size: 20px; font-weight: 800; color: var(--accent2); line-height: 1; }
+  .sq-stat-lbl  { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .sq-coverage-bar-wrap {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sq-coverage-bar-track {
+    height: 8px;
+    background: var(--surface3);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .sq-coverage-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    transition: width 0.4s;
+  }
+  .sq-coverage-bar-fill.full { background: linear-gradient(90deg, var(--success), #34d399); }
+  .sq-coverage-bar-lbl { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+  /* ── Ungrouped panel ── */
+  .sq-ungrouped-panel {
+    margin-top: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .sq-ungrouped-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .sq-ungrouped-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sq-ungrouped-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239,68,68,0.12);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+  }
+  .sq-ungrouped-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .sq-ungrouped-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px 18px;
+  }
+  .sq-ungrouped-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 5px 12px 5px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .sq-ungrouped-chip-av {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,var(--accent),var(--purple));
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .sq-ungrouped-chip select {
+    font-size: 11px;
+    background: var(--surface3);
+    color: var(--white);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 2px 4px;
+    cursor: pointer;
+    max-width: 130px;
+  }
 </style>
 </head>
 <body class="admin-locked">
@@ -2544,7 +2786,7 @@
     <div class="sidebar-logo">
       <div class="logo-mark">
         <div>
-          <div class="logo-text">SEET Engagement Planner</div>
+          <div class="logo-text">Food Committee Order<br>Monitoring</div>
         </div>
       </div>
     </div>
@@ -2558,26 +2800,10 @@
 
     <nav class="sidebar-nav">
       <div class="nav-section">
-        <div class="nav-label">Overview</div>
-        <div class="nav-item active" data-page="dashboard">
-          <span class="nav-icon"></span> Dashboard
-        </div>
-        <div class="nav-item" data-page="overview">
-          <span class="nav-icon"></span> Full Overview
-        </div>
-      </div>
-      <div class="nav-section">
-        <div class="nav-label">Planning</div>
-        <div class="nav-item" data-page="activities">
-          <span class="nav-icon"></span> Activities
+        <div class="nav-label">Monitoring</div>
+        <div class="nav-item active" data-page="activities">
+          <span class="nav-icon"></span> Food Orders Monitor
           <span class="nav-count" id="nav-count-activities">0</span>
-        </div>
-        <div class="nav-item" data-page="quarters">
-          <span class="nav-icon"></span> By Quarter
-        </div>
-        <div class="nav-item" data-page="locations">
-          <span class="nav-icon"></span> Locations
-          <span class="nav-count" id="nav-count-locations">0</span>
         </div>
         <div class="nav-item" data-page="people">
           <span class="nav-icon"></span> People
@@ -2589,6 +2815,12 @@
         <!-- Survey nav items hidden -->
         <span style="display:none;" id="survey-nav-badge"></span>
         <span style="display:none;" id="initial-survey-nav-badge"></span>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Scheduler</div>
+        <div class="nav-item" data-page="schedule">
+          <span class="nav-icon">🗓️</span> Food Committee Schedule
+        </div>
       </div>
       <!-- hidden count targets still needed by updateCounts() -->
       <span style="display:none;" id="nav-count-carseats"></span>
@@ -2619,20 +2851,13 @@
 
   <!-- MAIN -->
   <div class="main">
-    <!-- TOPBAR -->
-    <header class="topbar">
-      <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="topbar-actions">
-        <button class="btn btn-primary admin-only" id="topbar-add-btn" onclick="handleTopbarAdd()">
-          <span>＋</span> New Activity
-        </button>
-      </div>
-    </header>
+    <!-- TOPBAR (REMOVED) -->
+    <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
 
     <!-- ══════════════════ DASHBOARD ══════════════════ -->
-    <div class="page active" id="page-dashboard">
+    <div class="page" id="page-dashboard">
       <div class="glow-line"></div>
       <div class="section-header">
         <div>
@@ -2712,14 +2937,19 @@
     </div>
 
     <!-- ══════════════════ ACTIVITIES ══════════════════ -->
-    <div class="page" id="page-activities">
+    <div class="page active" id="page-activities">
       <div class="glow-line"></div>
       <div class="section-header">
         <div>
-          <div class="section-title">Activities</div>
-          <div class="section-subtitle">All engagement activities across all quarters</div>
+          <div class="section-title">Food Orders Monitor</div>
+          <div class="section-subtitle">Track food orders and confirmations across service lines</div>
         </div>
-        <button class="btn btn-primary admin-only" onclick="openModal('modal-activity')">＋ New Activity</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-sm admin-only" id="wa-notify-btn" onclick="sendFoodReadyNotification()" title="Notify WhatsApp group that distribution is good to go" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
+            Distribution Good to Go!
+          </button>
+        </div>
       </div>
       <div id="activities-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
@@ -2994,7 +3224,7 @@
           <div class="section-title">Survey Results</div>
           <div class="section-subtitle">Live attendance and date preference results from survey responses</div>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" onclick="syncFromMonday()" title="Pull latest responses from Monday.com">Sync from Monday</button>
           <button class="btn btn-ghost btn-sm" onclick="renderSurveyResultsPage()" title="Refresh charts">Refresh</button>
           <button class="btn btn-ghost btn-sm" onclick="resetSurveyData()" title="Clear all synced responses and reset charts" style="color:#ef4444;">Reset</button>
@@ -3049,18 +3279,15 @@
       <div class="glow-line"></div>
       <div class="section-header">
         <div>
-          <div class="section-title">Schedule of Activities</div>
-          <div class="section-subtitle">Day-by-day program for your engagement</div>
+          <div class="section-title">Food Committee Schedule</div>
+          <div class="section-subtitle">Wednesday Free Lunch group queue — ordered by upcoming schedule</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="openSchedulePreview()" title="Display-only card view + download">View Card</button>
-          <button class="btn btn-ghost btn-sm admin-only" onclick="cycleScheduleTemplate()" id="sch-tpl-btn" title="Switch card layout template">Template: Classic</button>
-          <button class="btn btn-ghost btn-sm admin-only" onclick="document.getElementById('sch-bg-input').click()" title="Change card background image — recommended 960×1440 px">Card Image</button>
-          <input type="file" id="sch-bg-input" accept="image/*" style="display:none;" onchange="saveScheduleCardImage(this)" />
-          <button class="btn btn-primary admin-only" onclick="openScheduleEventModal()">＋ Add Event</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-ghost btn-sm admin-only" onclick="resetSchedule()" title="Clear all groups from the schedule" style="font-size:12px;padding:6px 14px;color:var(--danger);border-color:var(--danger);">🗑 Reset Schedule</button>
+          <button class="btn btn-ghost btn-sm admin-only" onclick="openFoodCommitteeRandomizer()" title="Shuffle and group people into Food Committee teams" style="font-size:12px;padding:6px 14px;display:flex;align-items:center;gap:6px;">⚙️ Shuffle and Group</button>
         </div>
       </div>
-      <div id="schedule-list"></div>
+      <div id="scheduler-queue-wrap"></div>
     </div>
 
     <!-- ══════════════════ EXPENSES ══════════════════ -->
@@ -3184,6 +3411,99 @@
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-member')">Cancel</button>
       <button class="btn btn-primary" onclick="saveMember()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scheduler Group Members Modal -->
+<div class="modal-overlay" id="modal-sq-group" onclick="if(event.target===this)closeModal('modal-sq-group')">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-sq-group-title">Group Members</div>
+      <button class="modal-close" onclick="closeModal('modal-sq-group')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-sq-group-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sq-group')">Close</button>
+      <button class="btn btn-primary admin-only" id="modal-sq-add-member-btn" onclick="openSqAddMember()">＋ Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scheduler Add Member Modal -->
+<div class="modal-overlay" id="modal-sq-add-member" onclick="if(event.target===this)closeModal('modal-sq-add-member')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-sq-add-member-title">Add Member</div>
+      <button class="modal-close" onclick="closeModal('modal-sq-add-member')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input class="form-input" id="sq-mem-name" placeholder="e.g. Maria Santos" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role / Position</label>
+        <input class="form-input" id="sq-mem-role" placeholder="e.g. Team Lead" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sq-add-member')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSqMember()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- Food Committee Randomizer Modal -->
+<div class="modal-overlay" id="modal-group-randomizer" onclick="if(event.target===this)closeModal('modal-group-randomizer')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Randomize Food Committee Groups</div>
+      <button class="modal-close" onclick="closeModal('modal-group-randomizer')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="randomizer-quarter-warn" style="display:none;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#b45309;line-height:1.6;"></div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px;">Eligible people will be shuffled into teams, assigned consecutive Wednesdays, and named using the selected date's quarter plus a random horoscope sign.</div>
+      <div class="form-group">
+        <label class="form-label">Members per Group</label>
+        <input class="form-input" id="randomizer-group-size" type="number" min="1" value="4" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">First Wednesday</label>
+        <input class="form-input" id="randomizer-first-date" type="date" onchange="onRandomizerDateChange(this.value)" />
+        <div id="randomizer-date-hint" style="font-size:11px;margin-top:5px;color:var(--accent2);font-weight:600;"></div>
+      </div>
+      <div id="randomizer-summary" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-group-randomizer')">Cancel</button>
+      <button class="btn btn-primary" onclick="randomizeFoodCommitteeGroups()">Randomize</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scheduler Add Group Modal -->
+<div class="modal-overlay" id="modal-sq-group-add" onclick="if(event.target===this)closeModal('modal-sq-group-add')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Scheduler Group</div>
+      <button class="modal-close" onclick="closeModal('modal-sq-group-add')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input class="form-input" id="sq-group-name" placeholder="e.g. Dev Team A" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">First Assigned Wednesday</label>
+        <input class="form-input" type="date" id="sq-group-date" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-sq-group-add')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSqGroup()">Add Group</button>
     </div>
   </div>
 </div>
@@ -3644,15 +3964,19 @@
           <label class="form-label">Role / Position</label>
           <input class="form-input" id="person-role" placeholder="e.g. Software Engineer" />
         </div>
-        <div class="form-group">
+        <div class="form-group" id="person-contact-group">
           <label class="form-label">Contact</label>
           <input class="form-input" id="person-contact" placeholder="e.g. 09171234567" />
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="person-email-group">
         <label class="form-label">Email</label>
         <input class="form-input" id="person-email" type="email" placeholder="e.g. juan@company.com" />
       </div>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;cursor:pointer;">
+        <input id="person-grouping-exempt" type="checkbox" style="margin-top:2px;accent-color:var(--accent);" />
+        <span><strong style="display:block;font-size:12px;color:var(--white);">Exempt from Food Committee Grouping</strong><span style="display:block;font-size:11px;color:var(--muted);margin-top:2px;">Use for focals and anyone who should not be included by the randomizer.</span></span>
+      </label>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-person')">Cancel</button>
@@ -3672,6 +3996,27 @@
     <div class="admin-modal-actions">
       <button class="btn btn-ghost" onclick="closeAdminModal()">Cancel</button>
       <button class="btn btn-primary" onclick="submitAdminPasscode()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Food Distribution Modal -->
+<div class="modal-overlay" id="modal-food-assignee" onclick="if(event.target===this)closeModal('modal-food-assignee')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="food-assignee-title">Assign for Distribution</div>
+      <button class="modal-close" onclick="closeModal('modal-food-assignee')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Select a member from the assigned Group of the Week.</div>
+      <div class="form-group">
+        <label class="form-label">Group Member</label>
+        <select class="form-select" id="food-assignee-select"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-food-assignee')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveFoodDistributionAssignee()">Assign</button>
     </div>
   </div>
 </div>
@@ -3852,13 +4197,13 @@
 // FIREBASE (Firestore — hardcoded config)
 // ──────────────────────────────────────────────
 const FB_FIRESTORE_CONFIG = {
-  apiKey:            "AIzaSyCxmPWW9nh_IPq77Hyqm6k8dWOlcLnmM4k",
-  authDomain:        "seet-engagement.firebaseapp.com",
-  projectId:         "seet-engagement",
-  storageBucket:     "seet-engagement.firebasestorage.app",
-  messagingSenderId: "180830723590",
-  appId:             "1:180830723590:web:84793524d562556e1bad87",
-  measurementId:     "G-9QFJSGXPD8"
+  apiKey:            "AIzaSyBI5GEDEVf7iVC1owtCzXvhLZAGo8J5-P4",
+  authDomain:        "seet-order-management.firebaseapp.com",
+  projectId:         "seet-order-management",
+  storageBucket:     "seet-order-management.firebasestorage.app",
+  messagingSenderId: "392030365223",
+  appId:             "1:392030365223:web:c1a26ce4996d42e0f85002",
+  measurementId:     "G-NHKDJC743M"
 };
 
 const FB_COLLECTION = 'planner';
@@ -3881,32 +4226,39 @@ function initFirebase() {
   try {
     _fbApp    = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB_FIRESTORE_CONFIG);
     _fbDb     = firebase.firestore(_fbApp);
+    // Force long-polling so Firestore works behind corporate proxies / strict firewalls
+    _fbDb.settings({ experimentalForceLongPolling: true, merge: true });
     _fbDocRef = _fbDb.collection(FB_COLLECTION).doc(FB_DOC_ID);
 
     setFbStatus('syncing', 'Connecting…');
 
     // Real-time listener — fires on every remote change
     _fbUnsubscribe = _fbDocRef.onSnapshot(snapshot => {
-      if (snapshot.exists) {
-        const data = snapshot.data();
-        state = migrateState(data);
-        state.activities  = state.activities  || [];
-        state.locations   = state.locations   || [];
-        state.people      = state.people      || [];
-        // Strip legacy category field
-        state.activities.forEach(a => { delete a.category; });
-        // Restore local-only image fields (too large for Firestore)
-        _restoreImages();
-      } else {
-        // Document doesn't exist yet — seed it with current local state
-        _fbDocRef.set(state).catch(e => console.warn('Firestore seed error:', e));
+      try {
+        if (snapshot.exists) {
+          const data = snapshot.data();
+          state = migrateState(data);
+          state.activities  = state.activities  || [];
+          state.locations   = state.locations   || [];
+          state.people      = state.people      || [];
+          state.activities.forEach(a => { delete a.category; });
+          ensureDefaultActivity(state);
+          _restoreImages();
+        } else {
+          // Document doesn't exist yet — seed it with default activity then write
+          ensureDefaultActivity(state);
+          _fbDocRef.set(state).catch(e => console.warn('Firestore seed error:', e));
+        }
+        setFbStatus('connected', 'Live · Firestore');
+        initDate();
+        updateCounts();
+        navigate(currentPage);
+        if (state.engagement && !_countdownInterval) startCountdown();
+        loadSidebarSurveyResults();
+      } catch(e) {
+        console.error('Firestore onSnapshot handler error:', e);
+        setFbStatus('error', 'Sync error');
       }
-      setFbStatus('connected', 'Live · Firestore');
-      initDate();
-      updateCounts();
-      renderPage(currentPage);
-      if (state.engagement && !_countdownInterval) startCountdown();
-      loadSidebarSurveyResults();
     }, err => {
       setFbStatus('error', 'Sync error');
       console.error('Firestore listener error:', err);
@@ -3962,18 +4314,35 @@ function migrateState(s) {
   return s;
 }
 
+function defaultActivity() {
+  return {
+    id: 'wednesday-free-lunch',
+    name: 'Wednesday Free Lunch',
+    theme: 'Party',
+    foodOrders: [],
+    distributionAssignments: {},
+    cars: [], beds: [], games: [], committees: [], grocery: [], meals: [], expenses: [],
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function ensureDefaultActivity(s) {
+  if (!s.activities) s.activities = [];
+  if (!s.activities.length) s.activities = [defaultActivity()];
+  return s;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = migrateState(JSON.parse(raw));
       s.people = s.people || [];
-      // Always strip legacy category field from all activities
       (s.activities||[]).forEach(a => { delete a.category; });
-      return s;
+      return ensureDefaultActivity(s);
     }
   } catch(e) {}
-  return { activities: [], locations: [], people: [], _migrated: true };
+  return ensureDefaultActivity({ activities: [], locations: [], people: [], _migrated: true });
 }
 
 // Returns the sub-data object for the currently selected activity.
@@ -4073,6 +4442,7 @@ function openAdminModal() {
     const btn = document.getElementById('admin-lock-btn');
     btn.classList.remove('unlocked');
     btn.innerHTML = '<span id="admin-lock-label">Configure</span>';
+    if (currentPage === 'people') renderPeople();
     showToast('Dashboard locked');
     return;
   }
@@ -4106,6 +4476,7 @@ function submitAdminPasscode() {
     btn.classList.add('unlocked');
     btn.innerHTML = '<span id="admin-lock-label">Admin Mode</span>';
     closeAdminModal();
+    if (currentPage === 'people') renderPeople();
     showToast('Admin mode enabled');
   } else {
     const errEl = document.getElementById('admin-error-msg');
@@ -4167,7 +4538,7 @@ function initDate() {
 // ──────────────────────────────────────────────
 const PAGE_TITLES = {
   dashboard:        'Dashboard',
-  activities:       'Activities',
+  activities:       'Food Orders Monitor',
   quarters:         'By Quarter',
   locations:        'Locations',
   carseats:         'Car Seat Plan',
@@ -4176,7 +4547,7 @@ const PAGE_TITLES = {
   committee:        'Organizing Committee',
   grocery:          'Grocery List',
   mealplan:         'Meal Plan',
-  schedule:         'Schedule',
+  schedule:         'Food Committee Schedule',
   expenses:         'Expenses',
   overview:         'Full Plan Overview',
   people:           'People',
@@ -4205,7 +4576,7 @@ const ADD_LABELS = {
   'initial-survey': null,
 };
 
-let currentPage = 'dashboard';
+let currentPage = 'activities';
 let currentActivityId = null; // which activity the overview is scoped to
 
 function navigateToActivity(id) {
@@ -4348,6 +4719,41 @@ function showToast(msg, icon='') {
   t.innerHTML = `${icon ? `<span class="toast-icon">${icon}</span>` : ''}${msg}`;
   c.appendChild(t);
   setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.4s'; setTimeout(()=>t.remove(),400); }, 2800);
+}
+
+// Confirm toast — shows a persistent toast with Confirm / Cancel buttons.
+// onConfirm() is called if the user clicks Confirm.
+function showConfirmToast(msg, onConfirm) {
+  // Centered overlay dialog — not a toast
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:2000;
+    background:rgba(30,50,100,0.45);
+    backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    animation:toast-in 0.2s ease;`;
+  overlay.innerHTML = `
+    <div style="
+      background:var(--surface);
+      border:1px solid var(--border2);
+      border-radius:var(--radius-lg);
+      padding:28px 28px 22px;
+      max-width:400px;
+      width:100%;
+      box-shadow:0 8px 40px rgba(0,0,0,0.22);
+      display:flex;flex-direction:column;gap:18px;">
+      <div style="font-size:15px;font-weight:700;color:var(--white);line-height:1.5;">${msg}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="ctb-cancel" style="padding:8px 20px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--white);font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+        <button id="ctb-ok"     style="padding:8px 20px;border-radius:10px;border:none;background:var(--danger);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Yes, proceed</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const remove = () => { overlay.style.opacity='0'; overlay.style.transition='opacity 0.25s'; setTimeout(()=>overlay.remove(),250); };
+  overlay.querySelector('#ctb-ok').addEventListener('click', () => { remove(); onConfirm(); });
+  overlay.querySelector('#ctb-cancel').addEventListener('click', remove);
+  overlay.addEventListener('click', e => { if (e.target === overlay) remove(); });
 }
 
 // ──────────────────────────────────────────────
@@ -5199,51 +5605,175 @@ const THEME_META = {
 function themeBanner(a) {
   const t = a.theme || 'Party';
   const m = THEME_META[t] || THEME_META.Party;
-  const title = (a.name || a.title || '').trim();
   return `<div class="theme-banner ${m.cls}">
     <svg viewBox="0 0 400 88" preserveAspectRatio="none">${m.svg}</svg>
     <span class="theme-banner-label">
-      <span class="theme-banner-name">${title || t}</span>
+      <span class="theme-banner-name">Wednesday Free Lunch</span>
     </span>
     ${m.icon ? `<span class="theme-banner-icon">${m.icon}</span>` : ''}
   </div>`;
 }
 
-function renderActivityItem(a) {
-  const loc = a.locationId ? getLocationName(a.locationId) : '';
-  const fmtD = d => new Date(d + 'T00:00').toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
-  let durationStr = '';
-  if (a.dateStart && a.dateEnd && a.dateEnd !== a.dateStart) {
-    durationStr = `${fmtD(a.dateStart)} → ${fmtD(a.dateEnd)}`;
-  } else if (a.dateStart) {
-    durationStr = fmtD(a.dateStart);
-  } else if (a.date) {
-    durationStr = fmtD(a.date);
+let _foodOrderFilters = {};
+let _foodAssigneeCtx = null;
+
+function getActivityFoodOrders(a) {
+  return (a.foodOrders || a.attendees || []).map((order, index) => {
+    const personId = typeof order === 'object' ? order.personId || order.id : order;
+    const person = (state.people || []).find(p => p.id === personId);
+    const name = (typeof order === 'object' && order.name) || (person && person.name);
+    if (!name) return null;
+    const option = (typeof order === 'object' && (order.option || order.foodOption)) || (person && (person.foodOption || person.order)) || 'Food Option 1';
+    return { id: personId || `${a.id}-${index}`, name, option };
+  }).filter(Boolean);
+}
+
+// Returns the primary meat dish used for filter grouping.
+// Strips everything after the first " + " (sides/dessert), then takes only
+// the first comma-separated meat so pills stay short (e.g. "Pork Steak").
+function meatKey(option) {
+  const meat = (option || '').split(' + ')[0].trim();   // drop sides/dessert
+  return meat.split(',')[0].trim() || option;            // take first meat only
+}
+
+function renderFoodOrdersPanel(a) {
+  const orders = getActivityFoodOrders(a);
+  // Deduplicated, sorted meat groups used as filter pills
+  const meatGroups = [...new Set(orders.map(o => meatKey(o.option)))].sort();
+  const selected = meatGroups.includes(_foodOrderFilters[a.id]) ? _foodOrderFilters[a.id] : 'All';
+  const visible = selected === 'All' ? orders : orders.filter(o => meatKey(o.option) === selected);
+  const assignments = a.distributionAssignments || {};
+  const assignmentOption = selected === 'All' ? '' : selected;
+  const assignee = assignmentOption ? assignments[assignmentOption] : '';
+
+  return `<div class="food-orders-panel" onclick="event.stopPropagation()">
+    <div class="food-orders-header">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} order${visible.length !== 1 ? 's' : ''}${selected === 'All' ? '' : ` for ${selected}`}</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+        ${orders.length ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="clearFoodOrders('${a.id}')">Clear</button>` : ''}
+        ${assignee ? `<span style="font-size:11px;color:var(--muted);">Assigned to <strong style="color:var(--white);">${assignee}</strong></span>` : ''}
+        ${assignmentOption ? `<button class="btn btn-primary btn-sm admin-only" onclick="openFoodAssigneeModal('${a.id}','${assignmentOption.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
+        ${assignee ? `<button class="btn btn-sm admin-only" style="background:#25d366;color:#fff;border:none;font-weight:700;" onclick="notifyFoodAssignee('${a.id}','${assignmentOption.replace(/'/g,"\\'")}')">Notify Assignee in Group Chat</button>` : ''}
+      </div>
+    </div>
+    <div class="food-orders-filters">
+      <button class="food-filter-btn${selected === 'All' ? ' active' : ''}" onclick="setFoodOrderFilter('${a.id}','All')">All (${orders.length})</button>
+      ${meatGroups.map(mg => {
+        const count = orders.filter(o => meatKey(o.option) === mg).length;
+        return `<button class="food-filter-btn${selected === mg ? ' active' : ''}" onclick="setFoodOrderFilter('${a.id}','${mg.replace(/'/g,"\\'")}')">${mg} (${count})</button>`;
+      }).join('')}
+    </div>
+    <div class="food-order-list">
+      ${visible.length ? visible.map(order => `<div class="food-order-row">
+        <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--white);">${order.name}</div>
+        <div class="food-order-option">${order.option}</div>
+      </div>`).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No food orders found for this option.</div>'}
+    </div>
+  </div>`;
+}
+
+function setFoodOrderFilter(activityId, option) {
+  _foodOrderFilters[activityId] = option;
+  renderActivities();
+}
+
+function clearFoodOrders(activityId) {
+  if (!confirm('Clear all food orders and assignments for this activity?')) return;
+  const activity = (state.activities || []).find(a => a.id === activityId);
+  if (!activity) return;
+  activity.foodOrders = [];
+  activity.distributionAssignments = {};
+  delete _foodOrderFilters[activityId];
+  saveState();
+  renderActivities();
+  showToast('Food orders cleared.');
+}
+
+function getSchedulerGroupStatus() {
+  const groups = [...sqGroups()].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!groups.length) return { groups, current: null, previous: null };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingIndex = groups.findIndex(group => new Date(`${group.date}T00:00`) >= today);
+  const currentIndex = upcomingIndex >= 0 ? upcomingIndex : groups.length - 1;
+  return { groups, current: groups[currentIndex], previous: currentIndex > 0 ? groups[currentIndex - 1] : null };
+}
+
+function getCurrentSchedulerGroup() {
+  return getSchedulerGroupStatus().current;
+}
+
+function openFoodAssigneeModal(activityId, option) {
+  const group = getCurrentSchedulerGroup();
+  const members = group ? (group.members || []) : [];
+  if (!members.length) {
+    showToast('Add members to the assigned Group of the Week first.');
+    return;
   }
-  const daysTag = a.days > 1 ? `<span class="tag tag-purple">${a.days} days</span>` : '';
-  const attendeeCount = (a.attendees||[]).length;
-  const attendeeTag = attendeeCount ? `<span class="tag" style="background:var(--surface3);color:var(--muted);font-size:10px;">${attendeeCount} attending</span>` : '';
+  _foodAssigneeCtx = { activityId, option };
+  document.getElementById('food-assignee-title').textContent = `Assign ${option} for Distribution`;
+  document.getElementById('food-assignee-select').innerHTML = members.map(member => `<option value="${member.id}">${member.name}</option>`).join('');
+  openModal('modal-food-assignee');
+}
+
+function saveFoodDistributionAssignee() {
+  if (!_foodAssigneeCtx) return;
+  const activity = (state.activities || []).find(a => a.id === _foodAssigneeCtx.activityId);
+  const group = getCurrentSchedulerGroup();
+  const memberId = document.getElementById('food-assignee-select').value;
+  const member = group && (group.members || []).find(m => m.id === memberId);
+  if (!activity || !member) return;
+  if (!activity.distributionAssignments) activity.distributionAssignments = {};
+  activity.distributionAssignments[_foodAssigneeCtx.option] = member.name;
+  saveState();
+  closeModal('modal-food-assignee');
+  showToast(`${member.name} assigned to ${_foodAssigneeCtx.option}.`);
+  renderActivities();
+}
+
+function notifyFoodAssignee(activityId, option) {
+  const activity = (state.activities || []).find(a => a.id === activityId);
+  const name = activity && activity.distributionAssignments && activity.distributionAssignments[option];
+  if (!name) return;
+  const message = `Hi ${name} You are assigned ${option} for Distribution.`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+}
+
+function updateDistributionReadyVisibility() {
+  const button = document.getElementById('wa-notify-btn');
+  if (!button) return;
+  const activitiesWithOrders = (state.activities || []).filter(a => getActivityFoodOrders(a).length);
+  const allAssigned = activitiesWithOrders.length > 0 && activitiesWithOrders.every(a => {
+    const assignments = a.distributionAssignments || {};
+    return getActivityFoodOrders(a).every(order => !!assignments[order.option]);
+  });
+  button.style.display = allAssigned ? 'flex' : 'none';
+}
+
+function renderActivityItem(a) {
+  const today = new Date().toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+  const attendeeCount = getActivityFoodOrders(a).length;
+  const attendeeTag = attendeeCount ? `<span class="tag tag-cyan" style="font-size:10px;">${attendeeCount} Lunch Orders</span>` : '';
+  const { current: currentGroup, previous: previousGroup } = getSchedulerGroupStatus();
   return `
-  <div class="activity-card" onclick="navigateToActivity('${a.id}')" title="Open overview for this activity">
+  <div class="activity-card">
     ${themeBanner(a)}
     <div class="activity-card-body">
       <div class="activity-info">
-        <div class="activity-name">${a.name}</div>
+        <div class="activity-name">Group of the Week: ${currentGroup ? currentGroup.name : 'Not assigned'} ${currentGroup ? '<span class="tag tag-green" style="font-size:10px;">Current</span>' : ''}</div>
         <div class="activity-meta">
-          <span class="tag tag-blue">${a.quarter}</span>
-          ${daysTag}
-          ${durationStr?`<span>${durationStr}</span>`:''}
-          ${loc?`<span>${loc}</span>`:''}
+          <span>${today}</span>
           ${attendeeTag}
+          ${previousGroup ? `<button class="btn btn-ghost btn-sm" onclick="openSqGroup('${previousGroup.id}')" style="font-size:10px;padding:3px 8px;">Previous: ${previousGroup.name}</button>` : ''}
         </div>
         ${a.desc?`<div style="font-size:12px;color:var(--muted);margin-top:6px;">${a.desc}</div>`:''}
       </div>
-      <div class="activity-actions" onclick="event.stopPropagation()">
-        <button class="btn btn-ghost btn-sm" onclick="navigateToActivity('${a.id}')" title="View overview">View</button>
-        <button class="btn btn-ghost btn-sm btn-icon admin-only" onclick="openEditActivity('${a.id}')" title="Edit">Edit</button>
-        <button class="btn btn-danger btn-sm btn-icon admin-only" onclick="deleteActivity('${a.id}')" title="Delete">Delete</button>
-      </div>
     </div>
+    ${renderFoodOrdersPanel(a)}
   </div>`;
 }
 
@@ -5379,8 +5909,13 @@ function renderDashboard() {
 // ACTIVITIES
 function renderActivities() {
   const el = document.getElementById('activities-list');
-  if (!state.activities.length) { el.innerHTML = emptyState('No activities yet','Click "+ New Activity" to get started'); return; }
+  if (!state.activities.length) {
+    el.innerHTML = emptyState('No activities yet','Click "+ New Activity" to get started');
+    updateDistributionReadyVisibility();
+    return;
+  }
   el.innerHTML = state.activities.map(a=>renderActivityItem(a)).join('');
+  updateDistributionReadyVisibility();
 }
 
 // QUARTERS
@@ -5624,7 +6159,8 @@ function renderPeople() {
   if (actionsRow) {
     actionsRow.innerHTML = `
       <button class="btn btn-ghost admin-only" onclick="importPeopleFromSurvey()" title="Import unique names from survey responses">Import from Survey</button>
-      <button class="btn btn-primary admin-only" onclick="openModal('modal-person')">＋ Add Person</button>`;
+      <button class="btn btn-ghost admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="resetPeopleList()" title="Reset (clear) the entire People list">Reset List</button>
+      <button class="btn btn-primary admin-only" onclick="openAddPersonModal()">＋ Add Person</button>`;
   }
   if (filterRow) {
     filterRow.innerHTML = depts.map(d => `
@@ -5649,15 +6185,16 @@ function renderPeople() {
          </span>`
       : `<span class="people-dept ${deptClass(p.dept)}">${p.dept}</span>`;
     return `
-    <div class="people-card">
+    <div class="people-card" onclick="if(_adminUnlocked)openEditPerson('${p.id}')" style="${_adminUnlocked?'cursor:pointer;':''}" title="${_adminUnlocked?'Edit person':''}">
       <div class="people-avatar av-${i % 6}">${initials(p.name)}</div>
       <div class="people-info">
         <div class="people-name">${p.name}</div>
         <div class="people-role">${p.role||'—'}</div>
         ${deptDisplay}
+        ${p.groupingExempt ? '<span class="tag tag-yellow" style="font-size:10px;margin-left:6px;">Grouping Exempt</span>' : ''}
         ${p.contact?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">${p.contact}${p.email?' · '+p.email:''}</div>`:''}
       </div>
-      <button class="btn btn-danger btn-sm btn-icon admin-only" onclick="deletePerson('${p.id}')" title="Remove">Remove</button>
+      <button class="btn btn-danger btn-sm btn-icon admin-only" onclick="event.stopPropagation();deletePerson('${p.id}')" title="Remove">Remove</button>
     </div>`;
   }).join('');
 }
@@ -5672,21 +6209,70 @@ function updatePersonDept(id, dept) {
   renderPeople();
 }
 
+function resetPeopleList() {
+  if (!_adminUnlocked) return;
+  const count = (state.people || []).length;
+  if (!count) { showToast('People list is already empty.'); return; }
+  if (!confirm(`This will permanently remove all ${count} people from the list. Continue?`)) return;
+  state.people = [];
+  saveState();
+  renderPeople();
+  updateCounts();
+  showToast('People list has been reset.');
+}
+
+let _editingPersonId = null;
+
+function openAddPersonModal() {
+  _editingPersonId = null;
+  document.getElementById('modal-person-title').textContent = 'Add Person';
+  document.getElementById('person-name').value = '';
+  document.getElementById('person-dept').selectedIndex = 0;
+  document.getElementById('person-role').value = '';
+  document.getElementById('person-contact').value = '';
+  document.getElementById('person-email').value = '';
+  document.getElementById('person-contact-group').style.display = '';
+  document.getElementById('person-email-group').style.display = '';
+  document.getElementById('person-grouping-exempt').checked = false;
+  openModal('modal-person');
+}
+
+function openEditPerson(id) {
+  if (!_adminUnlocked) return;
+  const person = (state.people || []).find(p => p.id === id);
+  if (!person) return;
+  _editingPersonId = id;
+  document.getElementById('modal-person-title').textContent = 'Edit Person';
+  document.getElementById('person-name').value = person.name || '';
+  document.getElementById('person-dept').value = person.dept || SEET_DEPTS[0];
+  document.getElementById('person-role').value = person.role || '';
+  document.getElementById('person-contact').value = person.contact || '';
+  document.getElementById('person-email').value = person.email || '';
+  document.getElementById('person-contact-group').style.display = 'none';
+  document.getElementById('person-email-group').style.display = 'none';
+  document.getElementById('person-grouping-exempt').checked = !!person.groupingExempt;
+  openModal('modal-person');
+}
+
 function savePerson() {
   const name = document.getElementById('person-name').value.trim();
   if (!name) { showToast('Name is required.'); return; }
   if (!state.people) state.people = [];
-  state.people.push({
-    id: uid(), name,
-    dept:    document.getElementById('person-dept').value,
-    role:    document.getElementById('person-role').value.trim(),
+  const values = {
+    name,
+    dept: document.getElementById('person-dept').value,
+    role: document.getElementById('person-role').value.trim(),
     contact: document.getElementById('person-contact').value.trim(),
-    email:   document.getElementById('person-email').value.trim(),
-    createdAt: new Date().toISOString(),
-  });
+    email: document.getElementById('person-email').value.trim(),
+    groupingExempt: document.getElementById('person-grouping-exempt').checked,
+  };
+  const existing = _editingPersonId && state.people.find(p => p.id === _editingPersonId);
+  if (existing) Object.assign(existing, values);
+  else state.people.push({ id: uid(), ...values, createdAt: new Date().toISOString() });
   saveState();
   closeModal('modal-person');
-  showToast(`${name} added!`);
+  showToast(existing ? `${name} updated!` : `${name} added!`);
+  _editingPersonId = null;
   renderPeople();
   updateCounts();
 }
@@ -5702,65 +6288,80 @@ function deletePerson(id) {
 }
 
 // ──────────────────────────────────────────────
-// IMPORT PEOPLE FROM SURVEY
+// IMPORT PEOPLE FROM MONDAY (FoodClick board)
 // ──────────────────────────────────────────────
 function importPeopleFromSurvey() {
-  if (!_fbDb) { showToast('Not connected to Firestore.'); return; }
-  showToast('Reading survey responses…');
-  _fbDb.collection('survey').doc('engagement_survey').get().then(snap => {
-    if (!snap.exists) { showToast('No survey data found.'); return; }
-    const responses = snap.data().responses || [];
+  showToast('Fetching names from Monday.com…');
+
+  const query = `{
+    boards(ids: [${MONDAY_BOARD_ID}]) {
+      items_page(limit: 500) {
+        items {
+          id
+          name
+          column_values(ids: ["emailf9193p88","short_text318zahz7"]) {
+            id
+            text
+          }
+        }
+      }
+    }
+  }`;
+
+  fetch('https://api.monday.com/v2', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': MONDAY_API_TOKEN,
+      'API-Version': '2024-01',
+    },
+    body: JSON.stringify({ query }),
+  })
+  .then(r => r.json())
+  .then(json => {
+    if (json.errors) {
+      console.error('Monday API errors:', json.errors);
+      showToast('Monday.com API error. Check console.');
+      return;
+    }
+    const items = json.data?.boards?.[0]?.items_page?.items || [];
+    if (!items.length) { showToast('No responses found on Monday.com.'); return; }
+
     if (!state.people) state.people = [];
-
-    // ── Remove placeholder "Incoming form answer" entries + duplicates ──
-    const seenNames = new Set();
-    state.people = state.people.filter(p => {
-      const k = p.name.trim().toLowerCase();
-      if (k === 'incoming form answer') return false; // purge unresolvable placeholder
-      if (seenNames.has(k)) return false;
-      seenNames.add(k);
-      return true;
-    });
-
-    // Dedup key = name only (case-insensitive) — same person may submit with different dept
-    const existingKeys = new Set(
-      state.people.map(p => p.name.trim().toLowerCase())
-    );
-    const seen = new Set();
+    const existingKeys = new Set(state.people.map(p => p.name.trim().toLowerCase()));
     let added = 0;
-    responses.forEach(r => {
-      const name = resolveNameFromEmail(r.name, r.email);
+
+    items.forEach(item => {
+      const cols = {};
+      item.column_values.forEach(cv => { cols[cv.id] = cv.text || ''; });
+      const email    = cols['emailf9193p88'] || '';
+      const nickname = (cols['short_text318zahz7'] || '').trim();
+      const name = resolveNameFromEmail(item.name, email) || nickname;
       if (!name) return;
-      // Map survey serviceLine / dept fields to People dept; fall back to 'Other'
-      const rawDept = r.service || r.serviceLine || r.service_line || r.dept || r.department || '';
-      const dept = rawDept.trim() || 'Other';
       const key = name.trim().toLowerCase();
-      if (existingKeys.has(key) || seen.has(key)) return;
-      seen.add(key);
+      if (existingKeys.has(key)) return;
+      existingKeys.add(key);
       state.people.push({
         id:        uid(),
         name:      name,
-        dept:      dept,
+        dept:      'SEET - Automation Sector',
         role:      '',
         contact:   '',
-        email:     r.email || '',
+        email:     email,
         createdAt: new Date().toISOString(),
       });
-      existingKeys.add(key);
       added++;
     });
-    if (added === 0) {
-      showToast('All survey names are already in People.');
-      return;
-    }
+
+    if (added === 0) { showToast('All names are already in People.'); return; }
     saveState();
     renderPeople();
     updateCounts();
-    showToast(`${added} person${added !== 1 ? 's' : ''} imported from survey!`);
-    loadSidebarSurveyResults();
-  }).catch(err => {
-    console.error('Survey import error:', err);
-    showToast('Failed to read survey data.');
+    showToast(`${added} person${added !== 1 ? 's' : ''} imported from Monday.com!`);
+  })
+  .catch(err => {
+    console.error('Monday import error:', err);
+    showToast('Could not reach Monday.com API.');
   });
 }
 
@@ -6314,7 +6915,7 @@ function _renderSurveyResultsFromCache() {
         <!-- Pie card -->
         <div id="sr-card-pie" class="card sr-card-expandable" onclick="openSrTile('sr-card-pie')" style="padding:28px 24px;border-top:3px solid #22c55e;background:linear-gradient(160deg,rgba(34,197,94,0.05) 0%,var(--surface) 60%);">
           <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#22c55e;margin-bottom:6px;">Attendance</div>
-          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Will be attending the Yearend Party</div>
+          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Food Orders</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">${total} response${total!==1?'s':''} total</div>
           <div style="position:relative;max-width:280px;margin:0 auto;">
             <canvas id="sr-pie-canvas" height="280"></canvas>
@@ -6334,7 +6935,7 @@ function _renderSurveyResultsFromCache() {
         <!-- Line card -->
         <div id="sr-card-line" class="card sr-card-expandable" onclick="openSrTile('sr-card-line')" style="padding:28px 24px;border-top:3px solid #6366f1;background:linear-gradient(160deg,rgba(99,102,241,0.05) 0%,var(--surface) 60%);">
           <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#6366f1;margin-bottom:6px;">Preferred Dates</div>
-          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Preferred Dates for Yearend</div>
+          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Food Order tally</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">${sortedDates.length} unique date${sortedDates.length!==1?'s':''} chosen</div>
           <div style="position:relative;">
             <canvas id="sr-line-canvas" height="260"></canvas>
@@ -6344,7 +6945,7 @@ function _renderSurveyResultsFromCache() {
         <!-- Service Line Pie card -->
         <div id="sr-card-svc" class="card sr-card-expandable" onclick="openSrTile('sr-card-svc')" style="padding:28px 24px;border-top:3px solid #a855f7;background:linear-gradient(160deg,rgba(168,85,247,0.05) 0%,var(--surface) 60%);">
           <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#a855f7;margin-bottom:6px;">Service Lines</div>
-          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Attendees per Service Line</div>
+          <div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;">Food Orders per Service Line</div>
           <div style="font-size:12px;color:var(--muted);margin-bottom:20px;">${
             _srAttendFilter === 'yes' ? `${total} confirmed attendee${total!==1?'s':''}` :
             `${yes} confirmed attendee${yes!==1?'s':''}`
@@ -6717,40 +7318,65 @@ function _renderSurveyResultsFromCache() {
 // ──────────────────────────────────────────────
 // NAME RESOLUTION HELPER
 // ──────────────────────────────────────────────
-// Converts "Firstname.Lastname@ibm.com" → "Firstname Lastname"
-// Used when Monday.com returns "Incoming form answer" as the item name.
+// Converts "nn.oo.pp.qq@ibm.com" → "Nn Oo Pp Qq"
+// Rule: split local part on '.', floor(n/2) segments = First Name, ceil(n/2) = Last Name.
+// Examples:
+//   john.dela@ibm.com          → "John Dela"         (1+1)
+//   mary.ann.dela.cruz@ibm.com → "Mary Ann Dela Cruz" (2+2)
+//   john.dela.cruz@ibm.com     → "John Dela Cruz"    (1+2)
+// Also handles item names that are themselves email addresses.
 function resolveNameFromEmail(name, email) {
-  const placeholder = (name || '').trim().toLowerCase();
-  const isPlaceholder = !placeholder || placeholder === 'incoming form answer';
-  if (!isPlaceholder) return name.trim();
-  // Derive from email: take the local part before @, split on dot, capitalise each word
-  const local = (email || '').split('@')[0].trim();
-  if (!local) return null; // can't resolve — signal caller to skip this entry
-  return local.split('.').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  const trimmed = (name || '').trim();
+  const lower = trimmed.toLowerCase();
+
+  // Treat as needing resolution if blank, placeholder, or looks like an email
+  const isPlaceholder = !lower || lower === 'incoming form answer' || lower.includes('@');
+  if (!isPlaceholder) return trimmed;
+
+  // Pick the best email source: item name if it's an email, else the email field
+  const emailSrc = lower.includes('@') ? trimmed : (email || '');
+  const local = emailSrc.split('@')[0].trim();
+  if (!local) return null;
+
+  const cap = w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  const parts = local.split('.').filter(Boolean).map(cap);
+  if (!parts.length) return null;
+
+  // Split into first-name half and last-name half
+  const mid = Math.floor(parts.length / 2);
+  const firstName = parts.slice(0, mid || 1).join(' ');          // at least 1 part
+  const lastName  = parts.slice(mid || 1).join(' ');
+  return [firstName, lastName].filter(Boolean).join(' ');
 }
 
 // ──────────────────────────────────────────────
-// MONDAY.COM SYNC
+// MONDAY.COM SYNC  — FoodClick board
 // ──────────────────────────────────────────────
-const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDEwOTc5MywiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wM1QxNDo1NTo0NS44NTBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.LcEDVhxnSTbcSumOwsgnDL84_Nmy7IQ535gBCpCBDuM';
-const MONDAY_BOARD_ID  = '18429558495'; // ODC SEET Yearend Party
+const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDEwOTc5MywiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wM1QxNDo1NTo0NS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.weYA2s4WeknqQ98PEwMExBRmbrZeIheIOLgb10mG_P0';
+const MONDAY_BOARD_ID  = '18419302361'; // FoodClick — food order form
 
-// Column ID → field mapping for ODC SEET Yearend Party board
-const MONDAY_COL_MAP = {
-  emailulmvrvwk:          'email',      // Email
-  single_select3vv68hv:   'attend',     // Will you be able to attend?
-  single_select7zfnxfz:   'service',    // Service Line
-  multi_selectebjtc19q:   'date',       // Which Date works best for you? (multi-select)
-  single_selectihumw27:   'date',       // legacy single-select date (kept for old Firestore data)
-  single_selectmmqs0o3:   'venue',      // Top venue choice
-  multi_selectf9953y2n:   'venue',      // legacy multi-select venue (kept for old data)
-  single_selectebtb3bn:   'partyTheme', // Preferred Party Theme
-  single_selectwoqs24d:   'tourType',   // Day Tour or Overnight
-};
+// Column IDs for the FoodClick board
+const MONDAY_COL_IDS = [
+  'emailf9193p88',       // Email
+  'short_text318zahz7',  // Nickname / preferred name
+  'multi_select5rdinahs', // Choose 2 Meat Dishes  (food option)
+  'single_selectog9dpzv', // Side dish
+  'single_selectdixgyxb', // 2 Shanghai or Buttered Chicken
+  'single_selectlojz2ae', // Dessert
+];
+
+// Builds a human-readable food-option label from a row's column values
+function buildFoodOption(cols) {
+  const meat  = cols['multi_select5rdinahs']  || '';
+  const side  = cols['single_selectog9dpzv']  || '';
+  const extra = cols['single_selectdixgyxb']  || '';
+  const des   = cols['single_selectlojz2ae']  || '';
+  const parts = [meat, side, extra, des].filter(Boolean);
+  return parts.length ? parts.join(' + ') : 'Food Option 1';
+}
 
 function syncFromMonday() {
-  if (!_fbDb) { showToast('Not connected to Firestore.'); return; }
-  showToast('Fetching from Monday.com…');
+  showToast('Fetching food orders from Monday.com…');
 
   const query = `{
     boards(ids: [${MONDAY_BOARD_ID}]) {
@@ -6758,7 +7384,7 @@ function syncFromMonday() {
         items {
           id
           name
-          column_values(ids: ["emailulmvrvwk","single_select3vv68hv","single_select7zfnxfz","multi_selectebjtc19q","single_selectmmqs0o3","single_selectebtb3bn","single_selectwoqs24d"]) {
+          column_values(ids: [${MONDAY_COL_IDS.map(id => `"${id}"`).join(',')}]) {
             id
             text
             value
@@ -6773,6 +7399,7 @@ function syncFromMonday() {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': MONDAY_API_TOKEN,
+      'API-Version': '2024-01',
     },
     body: JSON.stringify({ query }),
   })
@@ -6785,43 +7412,42 @@ function syncFromMonday() {
     }
     const items = json.data?.boards?.[0]?.items_page?.items || [];
     if (!items.length) {
-      showToast('No survey responses found on Monday.com yet.');
+      showToast('No food orders found on Monday.com yet.');
       return;
     }
 
-    // Build responses array — resolve name from email if Monday returns placeholder
-    const responses = items.map(item => {
-      const r = { id: item.id, name: item.name };
+    // Resolve each row into a food order entry
+    const orders = items.map(item => {
+      const cols = {};
       item.column_values.forEach(cv => {
-        const field = MONDAY_COL_MAP[cv.id];
-        if (!field) return;
-        // Monday status columns sometimes return null for `text` but have the label in `value` as JSON
-        let val = cv.text || '';
-        if (!val && cv.value) {
-          try {
-            const parsed = JSON.parse(cv.value);
-            val = parsed.label?.text || parsed.text || parsed.name || '';
-          } catch (e) { /* ignore parse errors */ }
-        }
-        r[field] = val;
+        cols[cv.id] = cv.text || '';
       });
-      // If Monday sends "Incoming form answer" (or blank), derive name from email
-      r.name = resolveNameFromEmail(r.name, r.email);
-      return r;
-    }).filter(r => !!r.name); // drop entries that couldn't be resolved
+      const email    = cols['emailf9193p88'] || '';
+      const nickname = (cols['short_text318zahz7'] || '').trim();
+      // Resolve display name: prefer email-derived name, then nickname
+      let name = resolveNameFromEmail(item.name, email) || nickname;
+      if (!name) return null;
+      const option = buildFoodOption(cols);
+      return { id: item.id, name, option };
+    }).filter(Boolean);
 
-    // Write to Firestore survey/engagement_survey
-    _fbDb.collection('survey').doc('engagement_survey').set(
-      { responses },
-      { merge: false }
-    ).then(() => {
-      showToast(`${responses.length} response${responses.length !== 1 ? 's' : ''} synced from Monday.com`);
-      loadSidebarSurveyResults();
-      if (currentPage === 'survey-results') renderSurveyResultsPage();
-    }).catch(err => {
-      console.error('Firestore write error:', err);
-      showToast('Sync failed — Firestore write error.');
-    });
+    if (!orders.length) {
+      showToast('No valid food orders could be resolved.');
+      return;
+    }
+
+    // Inject orders into the currently active (first) activity
+    if (!state.activities || !state.activities.length) {
+      showToast('No activity found. Add a Wednesday Lunch activity first.');
+      return;
+    }
+    // Target: first activity, or the one currently open
+    const target = (currentActivityId && state.activities.find(a => a.id === currentActivityId))
+                 || state.activities[0];
+    target.foodOrders = orders;
+    saveState();
+    renderActivities();
+    showToast(`${orders.length} food order${orders.length !== 1 ? 's' : ''} synced from Monday.com`);
   })
   .catch(err => {
     console.error('Monday.com fetch error:', err);
@@ -6847,6 +7473,14 @@ function resetSurveyData() {
 
 
 
+// ──────────────────────────────────────────────
+// WHATSAPP NOTIFICATION
+// ──────────────────────────────────────────────
+function sendFoodReadyNotification() {
+  const message = 'Distribution is good to go! Please proceed to the distribution area.';
+  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+}
+
 // DEBUG: call debugMondayColumns() from the browser console to inspect
 // the real column IDs and first-row values returned by your Monday board.
 function debugMondayColumns() {
@@ -6863,7 +7497,7 @@ function debugMondayColumns() {
   }`;
   fetch('https://api.monday.com/v2', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': MONDAY_API_TOKEN },
+    headers: { 'Content-Type': 'application/json', 'Authorization': MONDAY_API_TOKEN, 'API-Version': '2024-01' },
     body: JSON.stringify({ query }),
   })
   .then(r => r.json())
@@ -8847,10 +9481,13 @@ function buildCarDiagram(car) {
 if (state.engagement) startCountdown();
 initDate();
 updateCounts();
-renderDashboard();
+navigate(currentPage);
 
 // Then connect Firestore — onSnapshot will refresh the UI once live data arrives
 initFirebase();
+
+// Fallback: re-render after 1.5 s in case Firestore is slow
+setTimeout(() => { if (state.activities && state.activities.length) navigate(currentPage); }, 1500);
 </script>
 
 <script>
@@ -9337,6 +9974,742 @@ function _lbKeyHandler(e) {
   if (e.key === 'ArrowRight') lightboxNav(1);
   else if (e.key === 'ArrowLeft') lightboxNav(-1);
   else if (e.key === 'Escape') closeLightboxBtn();
+}
+</script>
+
+<script>
+// ──────────────────────────────────────────────
+// FOOD COMMITTEE SCHEDULER — Group Queue
+// ──────────────────────────────────────────────
+
+// groups stored globally in state.schedulerGroups = [ { id, name, date, members:[] }, ... ]
+// Format Date object to local YYYY-MM-DD string without UTC shift
+function toLocalDateStr(d) {
+  if (!d || isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function snapToWednesday(dateStr) {
+  if (!dateStr) return '';
+  const parts = String(dateStr).split('T')[0].split('-');
+  let d;
+  if (parts.length === 3) {
+    d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+  } else {
+    d = new Date(dateStr);
+  }
+  if (isNaN(d.getTime())) return dateStr;
+  if (d.getDay() === 3) return toLocalDateStr(d);
+  const diff = (3 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return toLocalDateStr(d);
+}
+
+function normalizeSchedulerGroupName(g) {
+  if (!g || !g.date || !g.name) return;
+  const correctQ = quarterOfDate(g.date);
+  if (!correctQ) return;
+  const qPattern = /^Q[1-4]\b/i;
+  if (qPattern.test(g.name)) {
+    const updated = g.name.replace(qPattern, correctQ);
+    if (updated !== g.name) {
+      g.name = updated;
+      return true;
+    }
+  }
+  return false;
+}
+
+function sqGroups() {
+  if (!state.schedulerGroups) state.schedulerGroups = [];
+  // Ensure every group date strictly snaps to Wednesday and quarter in name matches date
+  let modified = false;
+  state.schedulerGroups.forEach(g => {
+    if (g && g.date) {
+      const snapped = snapToWednesday(g.date);
+      if (snapped && snapped !== g.date) {
+        g.date = snapped;
+        modified = true;
+      }
+    }
+    if (normalizeSchedulerGroupName(g)) {
+      modified = true;
+    }
+  });
+  if (modified) {
+    try { saveState(); } catch(e) {}
+  }
+  return state.schedulerGroups;
+}
+
+function resetSchedule() {
+  if (!_adminUnlocked) return;
+  const count = sqGroups().length;
+  if (!count) { showToast('Schedule is already empty.'); return; }
+  // Use a custom inline confirmation via showToast + deferred action
+  showConfirmToast(
+    `Remove all ${count} group${count !== 1 ? 's' : ''} from the schedule?`,
+    () => {
+      state.schedulerGroups = [];
+      saveState();
+      renderSchedule();
+      showToast('Schedule cleared.');
+    }
+  );
+}
+
+// Get the next Wednesday on or after a given date (or today)
+function nextWednesday(fromDate) {
+  const d = fromDate ? new Date(fromDate + 'T00:00') : new Date();
+  d.setHours(0,0,0,0);
+  const day = d.getDay(); // 0=Sun,3=Wed
+  const diff = (3 - day + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function fmtWed(dateStr) {
+  if (!dateStr) return '—';
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length === 3) {
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+    return d.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('default', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+const COLS_PER_ROW = 5;
+const HOROSCOPE_SIGNS = ['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+
+// ── Quarter helpers ──
+function getQuarterEndDate(q, year) {
+  const endMonth = { Q1: 2, Q2: 5, Q3: 8, Q4: 11 }[q];
+  return new Date(year, endMonth + 1, 0); // last day of last month in quarter
+}
+
+function getQuarterStartDate(q, year) {
+  const startMonth = { Q1: 0, Q2: 3, Q3: 6, Q4: 9 }[q];
+  return new Date(year, startMonth, 1);
+}
+
+// Returns all Wednesdays within the current quarter
+function getQuarterWednesdays(q, year) {
+  const start = getQuarterStartDate(q, year);
+  const end   = getQuarterEndDate(q, year);
+  const weds  = [];
+  // find first Wednesday on or after start
+  const d = new Date(start);
+  d.setHours(0,0,0,0);
+  const dayDiff = (3 - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + dayDiff);
+  while (d <= end) {
+    weds.push(toLocalDateStr(d));
+    d.setDate(d.getDate() + 7);
+  }
+  return weds;
+}
+
+// Returns people not assigned to any scheduler group
+function getUngroupedPeople() {
+  const grouped = new Set();
+  (sqGroups() || []).forEach(g => {
+    (g.members || []).forEach(m => grouped.add(m.id));
+  });
+  return (state.people || [])
+    .filter(p => !p.groupingExempt && !grouped.has(p.id));
+}
+
+// Returns YYYY-MM-DD string for the next Wednesday >= fromDateStr (or today)
+// and enforces it is never in the past.
+function nextFutureWednesday(fromDateStr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const base  = fromDateStr ? new Date(fromDateStr + 'T00:00') : new Date();
+  base.setHours(0,0,0,0);
+  // use whichever is later: today or the supplied date
+  const start = base > today ? base : today;
+  const diff  = (3 - start.getDay() + 7) % 7;
+  start.setDate(start.getDate() + diff);
+  return toLocalDateStr(start);
+}
+
+// Returns the quarter label for a YYYY-MM-DD date string
+function quarterOfDate(dateStr) {
+  if (!dateStr) return 'Q1';
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length >= 2) {
+    const m = parseInt(parts[1], 10) - 1;
+    return getQuarterFromMonth(m);
+  }
+  const d = new Date(dateStr);
+  return getQuarterFromMonth(d.getMonth());
+}
+
+// Returns the year for a YYYY-MM-DD date string
+function yearOfDate(dateStr) {
+  if (!dateStr) return new Date().getFullYear();
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length >= 1) {
+    return parseInt(parts[0], 10);
+  }
+  return new Date(dateStr).getFullYear();
+}
+
+// Live hint update when the date picker changes
+function onRandomizerDateChange(rawValue) {
+  const hint = document.getElementById('randomizer-date-hint');
+  if (!rawValue) { hint.textContent = ''; return; }
+
+  // Enforce: not in the past
+  const today = new Date(); today.setHours(0,0,0,0);
+  const picked = new Date(rawValue + 'T00:00');
+  if (picked < today) {
+    hint.style.color = 'var(--danger)';
+    hint.textContent = '⚠️ Cannot select a past date. Moving to next valid Wednesday.';
+    const fixed = nextFutureWednesday();
+    document.getElementById('randomizer-first-date').value = fixed;
+    onRandomizerDateChange(fixed);
+    return;
+  }
+
+  // Enforce: must be a Wednesday (day 3)
+  if (picked.getDay() !== 3) {
+    hint.style.color = 'var(--warning)';
+    const fixed = nextFutureWednesday(rawValue);
+    hint.textContent = `⚠️ That is not a Wednesday — snapping to ${fmtWed(fixed)}.`;
+    document.getElementById('randomizer-first-date').value = fixed;
+    onRandomizerDateChange(fixed);
+    return;
+  }
+
+  // Valid — show quarter hint
+  const q      = quarterOfDate(rawValue);
+  const yr     = yearOfDate(rawValue);
+  const qMonths = getQuarterMonths(q);
+  hint.style.color = 'var(--accent2)';
+  hint.textContent = `✅ Teams will be named ${q} ${yr} (${qMonths})`;
+}
+
+function openFoodCommitteeRandomizer() {
+  if (!_adminUnlocked) return;
+  const eligible = (state.people || []).filter(person => !person.groupingExempt);
+  if (!eligible.length) {
+    showToast('No eligible people are available for grouping.');
+    return;
+  }
+
+  // Open the modal first so all elements are accessible
+  openModal('modal-group-randomizer');
+
+  // Show inline quarter warning if current quarter hasn't ended yet
+  try {
+    const now      = new Date();
+    const q        = getQuarterFromMonth(now.getMonth());
+    const qEnd     = getQuarterEndDate(q, now.getFullYear());
+    const daysLeft = Math.ceil((qEnd - now) / 86400000);
+    const warnEl   = document.getElementById('randomizer-quarter-warn');
+    if (warnEl) {
+      if (daysLeft > 0) {
+        const qMonths = getQuarterMonths(q);
+        warnEl.style.display = '';
+        warnEl.innerHTML = `⚠️ <strong>Quarter ${q} (${qMonths}) has not ended yet</strong> — ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining.<br>Shuffle and Group is recommended at the <strong>start of a new quarter</strong>. You may still proceed.`;
+      } else {
+        warnEl.style.display = 'none';
+      }
+    }
+  } catch(e) { /* non-fatal */ }
+
+  // Set min to today so browser blocks past dates
+  const todayStr = toLocalDateStr(new Date());
+  const firstWed = nextFutureWednesday();
+  const inp = document.getElementById('randomizer-first-date');
+  if (inp) {
+    inp.min   = todayStr;
+    inp.value = firstWed;
+  }
+  const sumEl = document.getElementById('randomizer-summary');
+  if (sumEl) sumEl.textContent = `${eligible.length} eligible people · ${(state.people || []).length - eligible.length} exempt`;
+
+  try { onRandomizerDateChange(firstWed); } catch(e) { /* non-fatal */ }
+}
+
+function randomizeFoodCommitteeGroups() {
+  const eligible = (state.people || []).filter(person => !person.groupingExempt);
+  const groupSize = Math.max(1, parseInt(document.getElementById('randomizer-group-size').value, 10) || 1);
+  if (!eligible.length) { showToast('No eligible people are available for grouping.'); return; }
+
+  // Validate date one more time
+  const firstDateValue = document.getElementById('randomizer-first-date').value;
+  if (!firstDateValue) { showToast('Please select a First Wednesday date.'); return; }
+  const pickedDate = new Date(firstDateValue + 'T00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (pickedDate < today) { showToast('Cannot use a past date. Please select a future Wednesday.'); return; }
+  if (pickedDate.getDay() !== 3) { showToast('Selected date is not a Wednesday.'); return; }
+
+  // Determine quarter from the selected date's year and quarter
+  const selectedQ    = quarterOfDate(firstDateValue);
+  const selectedYear = yearOfDate(firstDateValue);
+
+  // Existing groups are kept — new ones are merged in by date order
+  const existingGroups = sqGroups();
+
+  // Shuffle people and signs
+  const shuffledPeople = [...eligible];
+  for (let i = shuffledPeople.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledPeople[i], shuffledPeople[j]] = [shuffledPeople[j], shuffledPeople[i]];
+  }
+  // Pick signs not yet used for this quarter+year
+  const usedSignsForQ = new Set(
+    existingGroups
+      .filter(g => g.date && quarterOfDate(g.date) === selectedQ && yearOfDate(g.date) === selectedYear)
+      .map(g => g.name.replace(`${selectedQ} `, '').trim())
+  );
+  const availableSigns = HOROSCOPE_SIGNS.filter(s => !usedSignsForQ.has(s));
+  const signPool = availableSigns.length ? availableSigns : [...HOROSCOPE_SIGNS];
+  const shuffledSigns = [...signPool];
+  for (let i = shuffledSigns.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledSigns[i], shuffledSigns[j]] = [shuffledSigns[j], shuffledSigns[i]];
+  }
+
+  const firstDate = new Date(firstDateValue + 'T00:00');
+  const generatedGroups = [];
+  for (let i = 0; i < shuffledPeople.length; i += groupSize) {
+    const groupIndex = generatedGroups.length;
+    const assignedDate = new Date(firstDate);
+    assignedDate.setDate(assignedDate.getDate() + groupIndex * 7);
+    const assignedDateStr = toLocalDateStr(assignedDate);
+    const groupQ = quarterOfDate(assignedDateStr);
+    generatedGroups.push({
+      id: uid(),
+      name: `${groupQ} ${shuffledSigns[groupIndex % shuffledSigns.length]}`,
+      date: assignedDateStr,
+      members: shuffledPeople.slice(i, i + groupSize).map(person => ({ id: person.id, name: person.name, role: person.role || '' })),
+      generated: true,
+    });
+  }
+
+  // Merge: keep existing groups + new ones, then sort all by date
+  // (this naturally handles Q3 before Q4 before Q1-next-year ordering)
+  if (!state.schedulerGroups) state.schedulerGroups = [];
+  state.schedulerGroups = [...state.schedulerGroups, ...generatedGroups]
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  saveState();
+  closeModal('modal-group-randomizer');
+  renderSchedule();
+  if (currentPage === 'activities') renderActivities();
+  showToast(`${generatedGroups.length} ${selectedQ} ${selectedYear} group${generatedGroups.length !== 1 ? 's' : ''} added to schedule.`);
+}
+
+// Add all ungrouped people randomly into existing groups
+function addAllUngroupedToGroups() {
+  if (!_adminUnlocked) return;
+  const ungrouped = getUngroupedPeople();
+  if (!ungrouped.length) { showToast('No ungrouped people found.'); return; }
+  const groups = sqGroups();
+  if (!groups.length) { showToast('No groups exist yet. Use Shuffle and Group first.'); return; }
+
+  // Shuffle ungrouped
+  const shuffled = [...ungrouped];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  // Distribute round-robin across groups by current size (smallest first)
+  const sorted = [...groups].sort((a, b) => (a.members||[]).length - (b.members||[]).length);
+  shuffled.forEach((person, idx) => {
+    const g = sorted[idx % sorted.length];
+    if (!g.members) g.members = [];
+    g.members.push({ id: person.id, name: person.name, role: person.role || '' });
+  });
+  saveState();
+  renderSchedule();
+  showToast(`${shuffled.length} person${shuffled.length !== 1 ? 's' : ''} distributed across existing groups.`);
+}
+
+// Add ungrouped people to NEW groups appended to the schedule
+function addUngroupedToRemainingSchedule() {
+  if (!_adminUnlocked) return;
+  const ungrouped = getUngroupedPeople();
+  if (!ungrouped.length) { showToast('No ungrouped people found.'); return; }
+
+  const now    = new Date();
+  const q      = getQuarterFromMonth(now.getMonth());
+  const year   = now.getFullYear();
+  const allQWeds = getQuarterWednesdays(q, year);
+
+  // Wednesdays already used by existing groups
+  const usedDates = new Set((sqGroups()).map(g => g.date));
+  const freeWeds  = allQWeds.filter(d => !usedDates.has(d));
+
+  // Default group size = same as existing groups (or 4)
+  const existingGroups = sqGroups();
+  const avgSize = existingGroups.length
+    ? Math.round(existingGroups.reduce((s, g) => s + (g.members||[]).length, 0) / existingGroups.length)
+    : 4;
+  const groupSize = Math.max(1, avgSize);
+
+  // Shuffle ungrouped
+  const shuffled = [...ungrouped];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Pick unused horoscope signs
+  const usedNames = new Set((sqGroups()).map(g => g.name));
+  const unusedSigns = HOROSCOPE_SIGNS.filter(s => !usedNames.has(`${q} ${s}`));
+  const signPool = unusedSigns.length ? unusedSigns : [...HOROSCOPE_SIGNS];
+  let signIdx = 0;
+
+  // Determine start date for new groups
+  const lastGroup = [...existingGroups].sort((a,b) => (a.date||'').localeCompare(b.date||'')).pop();
+  let nextDate = lastGroup
+    ? (() => { const d = new Date(lastGroup.date + 'T00:00'); d.setDate(d.getDate()+7); return d; })()
+    : nextWednesday();
+
+  const newGroups = [];
+  for (let i = 0; i < shuffled.length; i += groupSize) {
+    // Use a free Wednesday if available, otherwise continue past quarter end
+    let assignedDate;
+    if (freeWeds.length > newGroups.length) {
+      assignedDate = freeWeds[newGroups.length];
+    } else {
+      assignedDate = toLocalDateStr(nextDate);
+      nextDate = new Date(nextDate);
+      nextDate.setDate(nextDate.getDate() + 7);
+    }
+    const grpQ = quarterOfDate(assignedDate);
+    newGroups.push({
+      id: uid(),
+      name: `${grpQ} ${signPool[signIdx % signPool.length]}`,
+      date: assignedDate,
+      members: shuffled.slice(i, i + groupSize).map(p => ({ id: p.id, name: p.name, role: p.role || '' })),
+      generated: true,
+    });
+    signIdx++;
+  }
+
+  if (!state.schedulerGroups) state.schedulerGroups = [];
+  state.schedulerGroups.push(...newGroups);
+  saveState();
+  renderSchedule();
+  showToast(`${newGroups.length} new group${newGroups.length !== 1 ? 's' : ''} added to the schedule.`);
+}
+
+// Add a single ungrouped person to a chosen group
+function addUngroupedPersonToGroup(personId, groupId) {
+  if (!groupId) return;
+  const person = (state.people || []).find(p => p.id === personId);
+  const g = sqGroups().find(x => x.id === groupId);
+  if (!person || !g) return;
+  if (!g.members) g.members = [];
+  if (g.members.some(m => m.id === personId)) {
+    showToast(`${person.name} is already in ${g.name}.`);
+    return;
+  }
+  g.members.push({ id: person.id, name: person.name, role: person.role || '' });
+  saveState();
+  renderSchedule();
+  showToast(`${person.name} added to ${g.name}.`);
+}
+
+function renderSchedule() {
+  const el = document.getElementById('scheduler-queue-wrap');
+  if (!el) return;
+
+  const groups = [...sqGroups()].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const ungrouped  = getUngroupedPeople();
+  const status     = getSchedulerGroupStatus();
+  const activeDateStr = (status && status.current && status.current.date)
+    ? status.current.date
+    : (groups.length ? groups[0].date : toLocalDateStr(new Date()));
+  const q          = quarterOfDate(activeDateStr);
+  const year       = yearOfDate(activeDateStr);
+  const qWeds      = getQuarterWednesdays(q, year);
+  const qStart     = toLocalDateStr(getQuarterStartDate(q, year));
+  const qEnd       = toLocalDateStr(getQuarterEndDate(q, year));
+  const coveredCount = groups.filter(g => g.date >= qStart && g.date <= qEnd).length;
+  const coveragePct  = qWeds.length ? Math.round((coveredCount / qWeds.length) * 100) : 0;
+  const totalPeople  = (state.people || []).filter(p => !p.groupingExempt).length;
+
+  // ── Stats bar ──
+  let statsHtml = `
+    <div class="sq-stats-bar">
+      <div class="sq-stat-item">
+        <div class="sq-stat-val">${groups.length}</div>
+        <div class="sq-stat-lbl">Groups</div>
+      </div>
+      <div class="sq-stat-item">
+        <div class="sq-stat-val">${totalPeople}</div>
+        <div class="sq-stat-lbl">People</div>
+      </div>
+      <div class="sq-stat-item">
+        <div class="sq-stat-val" style="${ungrouped.length ? 'color:var(--danger)' : 'color:var(--success)'};">${ungrouped.length}</div>
+        <div class="sq-stat-lbl">Ungrouped</div>
+      </div>
+      <div class="sq-stat-item">
+        <div class="sq-stat-val">${qWeds.length}</div>
+        <div class="sq-stat-lbl">${q} Wednesdays</div>
+      </div>
+      <div class="sq-coverage-bar-wrap">
+        <div class="sq-coverage-bar-lbl">Quarter Coverage — ${coveredCount}/${qWeds.length} Wednesdays (${coveragePct}%)</div>
+        <div class="sq-coverage-bar-track">
+          <div class="sq-coverage-bar-fill${coveragePct >= 100 ? ' full' : ''}" style="width:${Math.min(coveragePct,100)}%;"></div>
+        </div>
+      </div>
+    </div>`;
+
+  if (!groups.length) {
+    el.innerHTML = statsHtml + `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No groups in the queue yet</div>
+      <div class="empty-sub">Use "Shuffle and Group" to create Food Committee groups.</div>
+    </div>`;
+    return;
+  }
+
+  // Build snake layout: row 0 L→R, row 1 R→L, row 2 L→R …
+  const rows = [];
+  for (let i = 0; i < groups.length; i += COLS_PER_ROW) {
+    rows.push(groups.slice(i, i + COLS_PER_ROW));
+  }
+
+  let html = statsHtml + '<div class="sq-queue-wrap">';
+
+  rows.forEach((row, rowIdx) => {
+    const isReverse = rowIdx % 2 === 1;
+    const displayRow = isReverse ? [...row].reverse() : row;
+    const rowStartIdx = rowIdx * COLS_PER_ROW;
+
+    html += `<div class="sq-queue-row${isReverse ? ' sq-reverse' : ''}">`;
+
+    displayRow.forEach((g, colIdx) => {
+      const globalIdx = isReverse
+        ? rowStartIdx + (row.length - 1 - colIdx)
+        : rowStartIdx + colIdx;
+      const isCurrent  = !!status.current  && g.id === status.current.id;
+      const isPrevious = !!status.previous && g.id === status.previous.id;
+      const isLast = colIdx === displayRow.length - 1;
+      const memberCount = (g.members || []).length;
+
+      html += `
+        <div class="sq-queue-box${isCurrent ? ' sq-current' : ''}" onclick="openSqGroup('${g.id}')">
+          ${isCurrent ? '<div class="sq-queue-box-badge">▶ Current</div>' : isPrevious ? '<div class="sq-queue-box-badge" style="background:var(--muted);">Previous</div>' : ''}
+          <div class="sq-queue-box-name">${g.name}</div>
+          <div class="sq-queue-box-date">📅 ${fmtWed(g.date)}</div>
+          <div style="font-size:10px;color:var(--muted2);margin-top:2px;">👤 ${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+        </div>`;
+
+      if (!isLast) {
+        const arrowIcon = isReverse ? '←' : '→';
+        html += `
+        <div class="sq-arrow">
+          <span class="sq-arrow-label">In Queue</span>
+          <span class="sq-arrow-icon">${arrowIcon}</span>
+        </div>`;
+      }
+    });
+
+    html += '</div>';
+
+    if (rowIdx < rows.length - 1) {
+      const arrowSide = isReverse ? 'left' : 'right';
+      const boxW = 170, arrowW = 52;
+      const totalW = COLS_PER_ROW * boxW + (COLS_PER_ROW - 1) * arrowW;
+      const offsetLeft = arrowSide === 'right' ? totalW - boxW : 0;
+      html += `<div class="sq-connector-wrap" style="width:${totalW}px;">
+        <div class="sq-connector-line" style="margin-left:${offsetLeft}px;">
+          <span class="sq-arrow-icon">↓</span>
+          <span class="sq-arrow-label">In Queue</span>
+        </div>
+      </div>`;
+    }
+  });
+
+  html += '</div>'; // close sq-queue-wrap
+
+  // ── Ungrouped Resources Panel ──
+  if (ungrouped.length) {
+    const groupOptions = groups.map(g =>
+      `<option value="${g.id}">${g.name} (${(g.members||[]).length})</option>`
+    ).join('');
+    const chipsHtml = ungrouped.map(p => {
+      const initials = p.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+      return `<div class="sq-ungrouped-chip">
+        <div class="sq-ungrouped-chip-av">${initials}</div>
+        <span>${p.name}</span>
+        <select onchange="addUngroupedPersonToGroup('${p.id}',this.value)" title="Add to group">
+          <option value="">— add to group —</option>
+          ${groupOptions}
+        </select>
+      </div>`;
+    }).join('');
+
+    const freeWeds = qWeds.filter(d => !coveredWeds.has(d));
+    const hasRemainingWeds = freeWeds.length > 0 || true; // always show; new groups can extend past quarter
+
+    html += `
+    <div class="sq-ungrouped-panel admin-only">
+      <div class="sq-ungrouped-header">
+        <div class="sq-ungrouped-title">
+          👤 Ungrouped Resources
+          <span class="sq-ungrouped-count">${ungrouped.length} ungrouped</span>
+        </div>
+        <div class="sq-ungrouped-actions">
+          <button class="btn btn-ghost btn-sm" onclick="addAllUngroupedToGroups()" title="Distribute all ungrouped people randomly across existing groups">
+            Add All to Existing Groups
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="addUngroupedToRemainingSchedule()" title="Create new groups for ungrouped people and add them to the schedule">
+            + Add to Remaining Schedule
+          </button>
+        </div>
+      </div>
+      <div class="sq-ungrouped-grid">${chipsHtml}</div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Open group members modal ──
+let _sqGroupCtx = null;
+
+function openSqGroup(id) {
+  const g = sqGroups().find(x => x.id === id);
+  if (!g) return;
+  _sqGroupCtx = id;
+  const status = getSchedulerGroupStatus();
+  const isPrevious = !!status.previous && status.previous.id === g.id;
+  document.getElementById('modal-sq-group-title').textContent = `${g.name}${isPrevious ? ' — Previous Group' : status.current && status.current.id === g.id ? ' — Current' : ''}`;
+
+  const members = g.members || [];
+  let body = '';
+
+  if (!members.length) {
+    body = `<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">
+      No members yet.<br>
+      <span style="font-size:12px;color:var(--muted2);">Use "+ Add Member" to add members to this group.</span>
+    </div>`;
+  } else {
+    body = `<div style="display:flex;flex-direction:column;gap:8px;">
+      ${members.map(m => `
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;">${m.name.charAt(0).toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--white);">${m.name}</div>
+            ${m.role ? `<div style="font-size:11px;color:var(--muted);">${m.role}</div>` : ''}
+            ${m.didNotHelp ? '<div style="font-size:10px;color:var(--danger);font-weight:700;margin-top:3px;">Did not help in distribution</div>' : ''}
+          </div>
+          ${isPrevious ? `<button class="btn btn-sm admin-only ${m.didNotHelp ? 'btn-ghost' : 'btn-danger'}" onclick="toggleDidNotHelp('${g.id}','${m.id}')">${m.didNotHelp ? 'Undo Tag' : 'Did Not Help'}</button>` : ''}
+          <button class="btn btn-danger btn-sm admin-only" onclick="deleteSqMember('${g.id}','${m.id}')">Remove</button>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  document.getElementById('modal-sq-group-body').innerHTML = body;
+  openModal('modal-sq-group');
+}
+
+function toggleDidNotHelp(groupId, memberId) {
+  if (!_adminUnlocked) return;
+  const status = getSchedulerGroupStatus();
+  const previousGroup = status.previous;
+  const currentGroup = status.current;
+  if (!previousGroup || previousGroup.id !== groupId || !currentGroup) return;
+  const member = (previousGroup.members || []).find(item => item.id === memberId);
+  if (!member) return;
+  member.didNotHelp = !member.didNotHelp;
+  if (member.didNotHelp) {
+    if (!(currentGroup.members || []).some(item => item.id === member.id || item.name.toLowerCase() === member.name.toLowerCase())) {
+      if (!currentGroup.members) currentGroup.members = [];
+      currentGroup.members.push({ id: member.id, name: member.name, role: member.role || '', carriedOver: true });
+    }
+  } else if (currentGroup.members) {
+    currentGroup.members = currentGroup.members.filter(item => !(item.carriedOver && (item.id === member.id || item.name.toLowerCase() === member.name.toLowerCase())));
+  }
+  saveState();
+  showToast(member.didNotHelp ? `${member.name} added to ${currentGroup.name}.` : `${member.name} removed from ${currentGroup.name}.`);
+  openSqGroup(groupId);
+  renderSchedule();
+  if (currentPage === 'activities') renderActivities();
+}
+
+function openSqAddMember() {
+  if (!_sqGroupCtx) return;
+  const g = sqGroups().find(x => x.id === _sqGroupCtx);
+  document.getElementById('modal-sq-add-member-title').textContent = `Add Member — ${g ? g.name : ''}`;
+  document.getElementById('sq-mem-name').value = '';
+  document.getElementById('sq-mem-role').value = '';
+  openModal('modal-sq-add-member');
+}
+
+function saveSqMember() {
+  const name = document.getElementById('sq-mem-name').value.trim();
+  if (!name) { showToast('Member name is required.'); return; }
+  const g = sqGroups().find(x => x.id === _sqGroupCtx);
+  if (!g) return;
+  if (!g.members) g.members = [];
+  g.members.push({ id: uid(), name, role: document.getElementById('sq-mem-role').value.trim() });
+  saveState();
+  closeModal('modal-sq-add-member');
+  showToast(`${name} added to ${g.name}!`);
+  openSqGroup(_sqGroupCtx); // refresh members view
+}
+
+function deleteSqMember(groupId, memberId) {
+  const g = sqGroups().find(x => x.id === groupId);
+  if (!g) return;
+  const m = (g.members || []).find(x => x.id === memberId);
+  g.members = (g.members || []).filter(x => x.id !== memberId);
+  saveState();
+  showToast(`${m ? m.name : 'Member'} removed.`);
+  openSqGroup(groupId);
+}
+
+// ── Add Group ──
+function openAddSchedulerGroup() {
+  document.getElementById('sq-group-name').value = '';
+  // Default to next Wednesday
+  const wed = nextWednesday();
+  document.getElementById('sq-group-date').value = toLocalDateStr(wed);
+  openModal('modal-sq-group-add');
+}
+
+function saveSqGroup() {
+  const name = document.getElementById('sq-group-name').value.trim();
+  if (!name) { showToast('Group name is required.'); return; }
+  const dateVal = document.getElementById('sq-group-date').value;
+
+  const groups = sqGroups();
+
+  // If a date was given, compute assigned Wednesday; otherwise auto-assign
+  let assignedDate;
+  if (dateVal) {
+    // Move to the next Wednesday on or after the given date
+    assignedDate = toLocalDateStr(nextWednesday(dateVal));
+  } else {
+    // Auto: last group's date + 7 days, or next Wednesday from today
+    if (groups.length) {
+      const lastDate = groups[groups.length - 1].date;
+      const d = new Date(lastDate + 'T00:00');
+      d.setDate(d.getDate() + 7);
+      assignedDate = toLocalDateStr(d);
+    } else {
+      assignedDate = toLocalDateStr(nextWednesday());
+    }
+  }
+
+  groups.push({ id: uid(), name, date: assignedDate, members: [] });
+  saveState();
+  closeModal('modal-sq-group-add');
+  showToast(`Group "${name}" added to queue!`);
+  renderSchedule();
 }
 </script>
 
