@@ -4123,7 +4123,7 @@
           <input class="form-input" id="person-role" placeholder="e.g. Software Engineer" />
         </div>
         <div class="form-group" id="person-contact-group">
-          <label class="form-label">Contact</label>
+          <label class="form-label">Phone Number <span style="font-size:10px;font-weight:700;background:rgba(79,70,229,0.12);color:var(--accent);border-radius:6px;padding:1px 6px;margin-left:4px;">Admin</span></label>
           <input class="form-input" id="person-contact" placeholder="e.g. 639171234567 (include country code, no +)" />
         </div>
       </div>
@@ -6736,8 +6736,8 @@ function openEditPerson(id) {
   document.getElementById('person-role').value = person.role || '';
   document.getElementById('person-contact').value = person.contact || '';
   document.getElementById('person-email').value = person.email || '';
-  document.getElementById('person-contact-group').style.display = 'none';
-  document.getElementById('person-email-group').style.display = 'none';
+  document.getElementById('person-contact-group').style.display = '';
+  document.getElementById('person-email-group').style.display = '';
   document.getElementById('person-grouping-exempt').checked = !!person.groupingExempt;
   openModal('modal-person');
 }
