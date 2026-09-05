@@ -10597,24 +10597,21 @@ function renderSchedule() {
       return `<div class="sq-ungrouped-chip">
         <div class="sq-ungrouped-chip-av">${initials}</div>
         <span>${p.name}</span>
-        <select onchange="addUngroupedPersonToGroup('${p.id}',this.value)" title="Add to group">
+        <select class="admin-only" onchange="addUngroupedPersonToGroup('${p.id}',this.value)" title="Add to group">
           <option value="">— add to group —</option>
           ${groupOptions}
         </select>
       </div>`;
     }).join('');
 
-    const freeWeds = qWeds.filter(d => !coveredWeds.has(d));
-    const hasRemainingWeds = freeWeds.length > 0 || true; // always show; new groups can extend past quarter
-
     html += `
-    <div class="sq-ungrouped-panel admin-only">
+    <div class="sq-ungrouped-panel">
       <div class="sq-ungrouped-header">
         <div class="sq-ungrouped-title">
           👤 Ungrouped Resources
           <span class="sq-ungrouped-count">${ungrouped.length} ungrouped</span>
         </div>
-        <div class="sq-ungrouped-actions">
+        <div class="sq-ungrouped-actions admin-only">
           <button class="btn btn-ghost btn-sm" onclick="addAllUngroupedToGroups()" title="Distribute all ungrouped people randomly across existing groups">
             Add All to Existing Groups
           </button>
