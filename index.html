@@ -2352,6 +2352,43 @@
   }
   .fca-card-dept { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .6px; }
 
+  /* ── Food Order Tiles (Survey Results) ── */
+  .sr-food-tiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .sr-food-tile {
+    position: relative;
+    padding: 20px 18px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform .15s, border-color .15s;
+  }
+  .sr-food-tile:hover { transform: translateY(-2px); border-color: var(--border2); }
+  .sr-food-tile-accent {
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .sr-food-tile-count {
+    font-size: 42px; font-weight: 900; line-height: 1; margin-bottom: 2px;
+    filter: drop-shadow(0 0 10px currentColor);
+  }
+  .sr-food-tile-pct {
+    font-size: 12px; font-weight: 700; opacity: 0.85; margin-bottom: 10px;
+  }
+  .sr-food-tile-label {
+    font-size: 12px; font-weight: 600; color: var(--white); line-height: 1.4;
+    margin-bottom: 12px; word-break: break-word;
+  }
+  .sr-food-tile-bar-wrap {
+    height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden;
+  }
+  .sr-food-tile-bar {
+    height: 100%; border-radius: 2px; transition: width .3s ease;
+  }
+  @media (max-width: 640px) { .sr-food-tiles-grid { grid-template-columns: repeat(2, 1fr); } }
+
   /* ── Admin lock ── */
   /* When body has .admin-locked, hide all admin-only buttons/controls */
   body.admin-locked .admin-only { display: none !important; }
@@ -3344,6 +3381,18 @@
           <div class="section-subtitle">Live attendance and date preference results from survey responses</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <!-- SR Meal type dropdown -->
+          <div style="position:relative;display:inline-block;" id="sr-meal-type-dropdown-wrap">
+            <button class="btn btn-ghost btn-sm" id="sr-meal-type-btn" onclick="toggleSrMealTypeDropdown()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
+              <span id="sr-meal-type-label">Set Dish Lunch</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4"/></svg>
+            </button>
+            <div id="sr-meal-type-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:200;min-width:160px;overflow:hidden;">
+              <button onclick="chooseSrMealType('set','Set Dish Lunch')" class="meal-type-opt" id="sr-mto-set">🍱 Set Dish Lunch</button>
+              <button onclick="chooseSrMealType('2dish','2 Dish Lunch')" class="meal-type-opt" id="sr-mto-2dish">🍽️ 2 Dish Lunch</button>
+              <button onclick="chooseSrMealType('complete','Complete Lunch')" class="meal-type-opt" id="sr-mto-complete">🥘 Complete Lunch</button>
+            </div>
+          </div>
           <button class="btn btn-ghost btn-sm" onclick="syncFromMonday()" title="Pull latest responses from Monday.com">Sync from Monday</button>
           <button class="btn btn-ghost btn-sm" onclick="renderSurveyResultsPage()" title="Refresh charts">Refresh</button>
           <button class="btn btn-ghost btn-sm" onclick="resetSurveyData()" title="Clear all synced responses and reset charts" style="color:#ef4444;">Reset</button>
@@ -5921,12 +5970,34 @@ function getActivityFoodOrders(a) {
     const name = (typeof order === 'object' && order.name) || (person && person.name);
     if (!name) return null;
     const option = (typeof order === 'object' && (order.option || order.foodOption)) || (person && (person.foodOption || person.order)) || 'Food Option 1';
-    const dept = (person && person.dept) || (typeof order === 'object' && (order.dept || order.service || order.serviceLine)) || 'Other';
-    return { id: personId || `${a.id}-${index}`, name, option, dept };
+    const dept   = (person && person.dept) || (typeof order === 'object' && (order.dept || order.service || order.serviceLine)) || 'Other';
+    // Individual meal-component fields (set by syncFromMonday; may be absent for legacy orders)
+    const meal   = (typeof order === 'object' && order.meal)   || '';
+    const dish   = (typeof order === 'object' && order.dish)   || '';
+    const veggie = (typeof order === 'object' && order.veggie) || '';
+    const side   = (typeof order === 'object' && order.side)   || '';
+    const des    = (typeof order === 'object' && order.des)    || '';
+    return { id: personId || `${a.id}-${index}`, name, option, dept, meal, dish, veggie, side, des };
   }).filter(Boolean);
 }
 
-// Returns the primary meat dish label (strips sides/dessert).
+// Returns the display key for an order based on the current meal type.
+// Set Dish  → meal field (single_select803v38p)
+// 2 Dish    → dish field (multi_selecttgo7p9s2)
+// Complete  → dish + veggie + dessert (ignores meal column)
+function orderKey(order) {
+  if (_mealType === 'set') {
+    return order.meal || order.option || 'Unknown';
+  } else if (_mealType === '2dish') {
+    return order.dish || order.option || 'Unknown';
+  } else {
+    // complete: dish + veggie + dessert
+    const parts = [order.dish, order.veggie, order.des].filter(Boolean);
+    return parts.length ? parts.join(' + ') : (order.option || 'Unknown');
+  }
+}
+
+// Legacy alias — kept for assignment storage key (always uses first segment of combined option)
 function meatKey(option) {
   const meat = (option || '').split(' + ')[0].trim();
   return meat.split(',')[0].trim() || option;
@@ -5972,21 +6043,23 @@ function renderFoodOrdersPanel(a) {
     return !assignments[key];
   });
 
+  // Helper: display label for an order in the row (shows the relevant field per meal type)
+  const orderDisplayLabel = order => orderKey(order);
+
   // ── SET DISH: skip Service Line & Batch — show Food Options directly ──
   if (isSet) {
     const optionCounts = {};
     unassignedOrders.forEach(o => {
-      const k = meatKey(o.option);
+      const k = orderKey(o);
       optionCounts[k] = (optionCounts[k] || 0) + 1;
     });
     const activeOptions = Object.keys(optionCounts).sort();
     const visible = f.foodOption === 'All' ? unassignedOrders
-      : unassignedOrders.filter(o => meatKey(o.option) === f.foodOption);
-    const selAssignee = f.foodOption !== 'All' ? (assignments[f.foodOption] || '') : '';
+      : unassignedOrders.filter(o => orderKey(o) === f.foodOption);
 
     const tier3Html = activeOptions.length ? `
       <div class="food-filter-tier" style="border-left:3px solid var(--cyan);padding-left:8px;">
-        <span class="food-filter-tier-label">Food Option</span>
+        <span class="food-filter-tier-label">Meal Option</span>
         <button class="food-filter-btn tier3${f.foodOption==='All'?' active':''}" onclick="setFoodFilterOption('${a.id}','All')">All (${unassignedOrders.length})</button>
         ${activeOptions.map(opt => `
           <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
@@ -6012,7 +6085,7 @@ function renderFoodOrdersPanel(a) {
         ${visible.length ? visible.map(order => `<div class="food-order-row">
           <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
           <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
-          <div class="food-order-option">${order.option}</div>
+          <div class="food-order-option">${orderDisplayLabel(order)}</div>
         </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders for this option.</div>`}
       </div>
     </div>`;
@@ -6026,12 +6099,12 @@ function renderFoodOrdersPanel(a) {
 
   const optionCounts = {};
   batchOrders.forEach(o => {
-    const k = meatKey(o.option);
+    const k = orderKey(o);
     optionCounts[k] = (optionCounts[k] || 0) + 1;
   });
   const activeOptions = Object.keys(optionCounts).sort();
   const visible = f.foodOption === 'All' ? batchOrders
-    : batchOrders.filter(o => meatKey(o.option) === f.foodOption);
+    : batchOrders.filter(o => orderKey(o) === f.foodOption);
 
   // Assign button scopes: show at Service Line level OR Batch level OR Food Option level
   const svcAssignKey   = f.svc !== 'All' && f.batch === 'All' && f.foodOption === 'All' ? f.svc : null;
@@ -6045,8 +6118,6 @@ function renderFoodOrdersPanel(a) {
       <button class="food-filter-btn${f.svc==='All'?' active':''}" onclick="setFoodFilterSvc('${a.id}','All')">All (${unassignedOrders.length})</button>
       ${svcSet.map(svc => {
         const cnt = unassignedOrders.filter(o=>(o.dept||'Other')===svc).length;
-        const svcKey = svc;
-        const alreadyAssigned = !!assignments[svcKey];
         return `<button class="food-filter-btn${f.svc===svc?' active':''}" onclick="setFoodFilterSvc('${a.id}','${svc.replace(/'/g,"\\'")}')">
           ${svc.replace('SEET - ','')} (${cnt})</button>`;
       }).join('')}
@@ -6095,7 +6166,7 @@ function renderFoodOrdersPanel(a) {
       ${visible.length ? visible.map(order => `<div class="food-order-row">
         <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
         <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
-        <div class="food-order-option">${order.option}</div>
+        <div class="food-order-option">${orderDisplayLabel(order)}</div>
       </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders match the selected filters.</div>`}
     </div>
   </div>`;
@@ -7168,6 +7239,39 @@ function setSrAttendFilter(val) {
   _renderSurveyResultsFromCache();
 }
 
+let _srMealType = 'set'; // 'set' | '2dish' | 'complete'
+
+function toggleSrMealTypeDropdown() {
+  const menu = document.getElementById('sr-meal-type-menu');
+  if (!menu) return;
+  const open = menu.style.display === 'block';
+  menu.style.display = open ? 'none' : 'block';
+  if (!open) {
+    ['set','2dish','complete'].forEach(t => {
+      const el = document.getElementById('sr-mto-' + t);
+      if (el) el.classList.toggle('active', t === _srMealType);
+    });
+  }
+}
+
+function chooseSrMealType(type, label) {
+  _srMealType = type;
+  const lbl = document.getElementById('sr-meal-type-label');
+  if (lbl) lbl.textContent = label;
+  const menu = document.getElementById('sr-meal-type-menu');
+  if (menu) menu.style.display = 'none';
+  _renderSurveyResultsFromCache();
+}
+
+// Close SR meal dropdown when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('sr-meal-type-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('sr-meal-type-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
 function renderSurveyResultsPage() {
   const body = document.getElementById('survey-results-body');
   if (!body) return;
@@ -7187,6 +7291,88 @@ function renderSurveyResultsPage() {
     console.error('Survey results page error:', err);
   });
 }
+
+
+// ──────────────────────────────────────────────
+// FOOD ORDER TILES  — Survey Results section
+// ──────────────────────────────────────────────
+function renderFoodOrderTiles() {
+  const activity = (state.activities || [])[0];
+  if (!activity) return '';
+  const allOrders = getActivityFoodOrders(activity);
+  if (!allOrders.length) {
+    return `<div style="margin-top:28px;padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);text-align:center;color:var(--muted);font-size:13px;">
+      No food orders synced yet. Use <strong>Sync from Monday</strong> to load orders.
+    </div>`;
+  }
+
+  const mealTypeLabel = _srMealType === 'set' ? '🍱 Set Dish Lunch'
+    : _srMealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
+
+  // Helper: compute a display key for an order based on SR meal type
+  function srOrderKey(order) {
+    if (_srMealType === 'set') {
+      return order.meal || order.option || 'Unknown';
+    } else if (_srMealType === '2dish') {
+      return order.dish || order.option || 'Unknown';
+    } else {
+      // complete: dish + veggie + dessert (ignore meal column)
+      const parts = [order.dish, order.veggie, order.des].filter(Boolean);
+      return parts.length ? parts.join(' + ') : (order.option || 'Unknown');
+    }
+  }
+
+  // Build tally map: key → count
+  const tally = {};
+  allOrders.forEach(o => {
+    const k = srOrderKey(o);
+    tally[k] = (tally[k] || 0) + 1;
+  });
+
+  const entries = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+  const total = allOrders.length;
+
+  // Colour palette cycling
+  const TILE_COLORS = [
+    { accent: '#4f46e5', bg: 'rgba(79,70,229,0.08)', border: 'rgba(79,70,229,0.3)' },
+    { accent: '#9333ea', bg: 'rgba(147,51,234,0.08)', border: 'rgba(147,51,234,0.3)' },
+    { accent: '#0891b2', bg: 'rgba(8,145,178,0.08)',  border: 'rgba(8,145,178,0.3)'  },
+    { accent: '#059669', bg: 'rgba(5,150,105,0.08)',  border: 'rgba(5,150,105,0.3)'  },
+    { accent: '#d97706', bg: 'rgba(217,119,6,0.08)',  border: 'rgba(217,119,6,0.3)'  },
+    { accent: '#dc2626', bg: 'rgba(220,38,38,0.08)',  border: 'rgba(220,38,38,0.3)'  },
+    { accent: '#ec4899', bg: 'rgba(236,72,153,0.08)', border: 'rgba(236,72,153,0.3)' },
+    { accent: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.3)' },
+  ];
+
+  const tilesHtml = entries.map(([label, count], i) => {
+    const c = TILE_COLORS[i % TILE_COLORS.length];
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    return `
+      <div class="sr-food-tile" style="border-color:${c.border};background:linear-gradient(160deg,${c.bg} 0%,var(--surface) 60%);">
+        <div class="sr-food-tile-accent" style="background:${c.accent};"></div>
+        <div class="sr-food-tile-count" style="color:${c.accent};">${count}</div>
+        <div class="sr-food-tile-pct" style="color:${c.accent};">${pct}%</div>
+        <div class="sr-food-tile-label">${label}</div>
+        <div class="sr-food-tile-bar-wrap">
+          <div class="sr-food-tile-bar" style="width:${pct}%;background:${c.accent};"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--white);">Food Order Breakdown</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">${total} order${total!==1?'s':''} · ${entries.length} unique option${entries.length!==1?'s':''} · <span style="color:var(--accent);font-weight:600;">${mealTypeLabel}</span></div>
+        </div>
+      </div>
+      <div class="sr-food-tiles-grid">
+        ${tilesHtml}
+      </div>
+    </div>`;
+}
+
 
 function _renderSurveyResultsFromCache() {
   const body = document.getElementById('survey-results-body');
@@ -7467,7 +7653,10 @@ function _renderSurveyResultsFromCache() {
           <div style="font-size:12px;color:var(--muted);margin-top:12px;">respondent${notAvailableAll!==1?'s':''} not available for any date</div>
         </div>
 
-      </div>`;
+      </div>
+      <!-- Food Order Tiles by Meal Type -->
+      ${renderFoodOrderTiles()}
+      `;
 
     // destroy old charts before re-creating
     if (_srPieChart)   { _srPieChart.destroy();   _srPieChart   = null; }
@@ -7852,14 +8041,19 @@ function syncFromMonday() {
       item.column_values.forEach(cv => {
         cols[cv.id] = cv.text || '';
       });
-      const email = cols['emailjefgq3je'] || '';
-      const dept  = cols['single_selectw3y6kdg'] || 'Other';
+      const email  = cols['emailjefgq3je'] || '';
+      const dept   = cols['single_selectw3y6kdg'] || 'Other';
       // Name comes from the item's board name column (person typed their name)
       let name = item.name.trim();
       if (!name) name = resolveNameFromEmail(null, email);
       if (!name) return null;
+      const meal   = cols['single_select803v38p'] || '';
+      const dish   = cols['multi_selecttgo7p9s2'] || '';
+      const veggie = cols['multi_select31gcf0e9'] || '';
+      const side   = cols['single_selectktzksgz'] || '';
+      const des    = cols['single_select0h7er2i'] || '';
       const option = buildFoodOption(cols);
-      return { id: item.id, name, option, dept };
+      return { id: item.id, name, option, dept, meal, dish, veggie, side, des };
     }).filter(Boolean);
 
     if (!orders.length) {
