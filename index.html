@@ -3308,6 +3308,7 @@
         <div style="display:flex;gap:8px;align-items:center;">
           <button class="btn btn-ghost btn-sm admin-only" onclick="resetSchedule()" title="Clear all groups from the schedule" style="font-size:12px;padding:6px 14px;color:var(--danger);border-color:var(--danger);">🗑 Reset Schedule</button>
           <button class="btn btn-ghost btn-sm admin-only" onclick="openFoodCommitteeRandomizer()" title="Shuffle and group people into Food Committee teams" style="font-size:12px;padding:6px 14px;display:flex;align-items:center;gap:6px;">⚙️ Shuffle and Group</button>
+          <button class="btn btn-primary btn-sm admin-only" onclick="openAddSchedulerGroup()" title="Create a new Food Committee group manually" style="font-size:12px;padding:6px 14px;display:flex;align-items:center;gap:6px;">＋ Add Group</button>
         </div>
       </div>
       <div id="scheduler-queue-wrap"></div>
@@ -10301,7 +10302,8 @@ function randomizeFoodCommitteeGroups() {
 
   const firstDate = new Date(firstDateValue + 'T00:00');
   const generatedGroups = [];
-  for (let i = 0; i < shuffledPeople.length; i += groupSize) {
+  // Only create full groups of size groupSize; leftover people (< groupSize) remain ungrouped
+  for (let i = 0; i + groupSize <= shuffledPeople.length; i += groupSize) {
     const groupIndex = generatedGroups.length;
     const assignedDate = new Date(firstDate);
     assignedDate.setDate(assignedDate.getDate() + groupIndex * 7);
@@ -10316,6 +10318,8 @@ function randomizeFoodCommitteeGroups() {
     });
   }
 
+  const remainderCount = shuffledPeople.length % groupSize;
+
   // Merge: keep existing groups + new ones, then sort all by date
   // (this naturally handles Q3 before Q4 before Q1-next-year ordering)
   if (!state.schedulerGroups) state.schedulerGroups = [];
@@ -10326,7 +10330,11 @@ function randomizeFoodCommitteeGroups() {
   closeModal('modal-group-randomizer');
   renderSchedule();
   if (currentPage === 'activities') renderActivities();
-  showToast(`${generatedGroups.length} ${selectedQ} ${selectedYear} group${generatedGroups.length !== 1 ? 's' : ''} added to schedule.`);
+  if (remainderCount > 0) {
+    showToast(`${generatedGroups.length} ${selectedQ} ${selectedYear} group${generatedGroups.length !== 1 ? 's' : ''} created. ${remainderCount} leftover person${remainderCount !== 1 ? 's' : ''} moved to Ungrouped.`);
+  } else {
+    showToast(`${generatedGroups.length} ${selectedQ} ${selectedYear} group${generatedGroups.length !== 1 ? 's' : ''} added to schedule.`);
+  }
 }
 
 // Add all ungrouped people randomly into existing groups
@@ -10610,7 +10618,10 @@ function renderSchedule() {
           <button class="btn btn-ghost btn-sm" onclick="addAllUngroupedToGroups()" title="Distribute all ungrouped people randomly across existing groups">
             Add All to Existing Groups
           </button>
-          <button class="btn btn-primary btn-sm" onclick="addUngroupedToRemainingSchedule()" title="Create new groups for ungrouped people and add them to the schedule">
+          <button class="btn btn-ghost btn-sm" onclick="openAddSchedulerGroup()" title="Create a new custom group for these resources">
+            ＋ Create New Group
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="addUngroupedToRemainingSchedule()" title="Auto-create new groups for ungrouped people and add them to the schedule">
             + Add to Remaining Schedule
           </button>
         </div>
