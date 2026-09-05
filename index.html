@@ -394,9 +394,13 @@
   .activity-card-body { padding: 16px 20px; display: flex; align-items: flex-start; gap: 14px; }
   .food-orders-panel { margin: 0 16px 16px; padding: 18px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
   .food-orders-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-  .food-orders-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
-  .food-filter-btn { padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+  /* tier filter rows */
+  .food-filter-tier { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
+  .food-filter-tier-label { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .7px; margin-right: 4px; flex-shrink: 0; }
+  .food-filter-btn { padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
   .food-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .food-filter-btn.tier2.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .food-filter-btn.tier3.active { background: var(--cyan); border-color: var(--cyan); color: #fff; }
   .food-order-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px; }
   .food-order-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
   .food-order-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg,var(--accent),var(--purple)); color: #fff; font-size: 12px; font-weight: 700; }
@@ -2711,13 +2715,34 @@
   .sq-coverage-bar-fill.full { background: linear-gradient(90deg, var(--success), #34d399); }
   .sq-coverage-bar-lbl { font-size: 10px; color: var(--muted); font-weight: 600; }
 
+  /* ── Schedule side-by-side layout ── */
+  .sq-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .sq-layout-queue {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .sq-layout-side {
+    flex-shrink: 0;
+    width: 300px;
+  }
+  @media (max-width: 900px) {
+    .sq-layout { flex-direction: column; }
+    .sq-layout-side { width: 100%; }
+  }
+
   /* ── Ungrouped panel ── */
   .sq-ungrouped-panel {
-    margin-top: 28px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
+    position: sticky;
+    top: 20px;
   }
   .sq-ungrouped-header {
     display: flex;
@@ -5640,8 +5665,23 @@ function themeBanner(a) {
   </div>`;
 }
 
-let _foodOrderFilters = {};
+// ── Food Order filter state: { activityId: { svc, batch, foodOption } }
+let _foodFilters = {};
 let _foodAssigneeCtx = null;
+
+// Batch definitions: letter ranges by first character of last name token
+const FOOD_BATCHES = [
+  { label: 'Batch 1', range: 'A–G', test: c => c >= 'a' && c <= 'g' },
+  { label: 'Batch 2', range: 'H–N', test: c => c >= 'h' && c <= 'n' },
+  { label: 'Batch 3', range: 'O–T', test: c => c >= 'o' && c <= 't' },
+  { label: 'Batch 4', range: 'U–Z', test: c => c >= 'u' && c <= 'z' },
+];
+
+function _nameBatch(name) {
+  const first = (name || '').trim().toLowerCase().charAt(0);
+  const b = FOOD_BATCHES.find(b => b.test(first));
+  return b ? b.label : 'Batch 4';
+}
 
 function getActivityFoodOrders(a) {
   return (a.foodOrders || a.attendees || []).map((order, index) => {
@@ -5650,60 +5690,129 @@ function getActivityFoodOrders(a) {
     const name = (typeof order === 'object' && order.name) || (person && person.name);
     if (!name) return null;
     const option = (typeof order === 'object' && (order.option || order.foodOption)) || (person && (person.foodOption || person.order)) || 'Food Option 1';
-    return { id: personId || `${a.id}-${index}`, name, option };
+    const dept = (person && person.dept) || (typeof order === 'object' && (order.dept || order.service || order.serviceLine)) || 'Other';
+    return { id: personId || `${a.id}-${index}`, name, option, dept };
   }).filter(Boolean);
 }
 
-// Returns the primary meat dish used for filter grouping.
-// Strips everything after the first " + " (sides/dessert), then takes only
-// the first comma-separated meat so pills stay short (e.g. "Pork Steak").
+// Returns the primary meat dish label (strips sides/dessert).
 function meatKey(option) {
-  const meat = (option || '').split(' + ')[0].trim();   // drop sides/dessert
-  return meat.split(',')[0].trim() || option;            // take first meat only
+  const meat = (option || '').split(' + ')[0].trim();
+  return meat.split(',')[0].trim() || option;
+}
+
+function _getFoodFilter(actId) {
+  if (!_foodFilters[actId]) _foodFilters[actId] = { svc: 'All', batch: 'All', foodOption: 'All' };
+  return _foodFilters[actId];
+}
+
+function setFoodFilterSvc(actId, svc) {
+  const f = _getFoodFilter(actId);
+  f.svc = svc; f.batch = 'All'; f.foodOption = 'All';
+  renderActivities();
+}
+function setFoodFilterBatch(actId, batch) {
+  const f = _getFoodFilter(actId);
+  f.batch = batch; f.foodOption = 'All';
+  renderActivities();
+}
+function setFoodFilterOption(actId, opt) {
+  _getFoodFilter(actId).foodOption = opt;
+  renderActivities();
 }
 
 function renderFoodOrdersPanel(a) {
-  const orders = getActivityFoodOrders(a);
-  // Deduplicated, sorted meat groups used as filter pills
-  const meatGroups = [...new Set(orders.map(o => meatKey(o.option)))].sort();
-  const selected = meatGroups.includes(_foodOrderFilters[a.id]) ? _foodOrderFilters[a.id] : 'All';
-  const visible = selected === 'All' ? orders : orders.filter(o => meatKey(o.option) === selected);
+  const allOrders = getActivityFoodOrders(a);
+  if (!allOrders.length) {
+    return `<div class="food-orders-panel" onclick="event.stopPropagation()">
+      <div style="font-size:13px;color:var(--muted);padding:12px 0;text-align:center;">No food orders yet.</div>
+    </div>`;
+  }
+
+  const f = _getFoodFilter(a.id);
+
+  // ── Tier 1: Service Lines (only those with orders) ──
+  const svcSet = [...new Set(allOrders.map(o => o.dept || 'Other'))].sort();
+  const svcOrders = f.svc === 'All' ? allOrders : allOrders.filter(o => (o.dept || 'Other') === f.svc);
+
+  // ── Tier 2: Batches (only shown when a service line is selected; only those with members) ──
+  const batchOrders = f.batch === 'All' ? svcOrders : svcOrders.filter(o => _nameBatch(o.name) === f.batch);
+  const activeBatches = FOOD_BATCHES.filter(b => svcOrders.some(o => _nameBatch(o.name) === b.label));
+
+  // ── Tier 3: Food Options (only those with count > 0 in current batch scope) ──
+  const optionCounts = {};
+  batchOrders.forEach(o => {
+    const k = meatKey(o.option);
+    optionCounts[k] = (optionCounts[k] || 0) + 1;
+  });
+  const activeOptions = Object.keys(optionCounts).sort();
+  const visible = f.foodOption === 'All' ? batchOrders
+    : batchOrders.filter(o => meatKey(o.option) === f.foodOption);
+
   const assignments = a.distributionAssignments || {};
-  const assignmentOption = selected === 'All' ? '' : selected;
-  const assignee = assignmentOption ? assignments[assignmentOption] : '';
+  const assignee = (f.foodOption !== 'All') ? (assignments[f.foodOption] || '') : '';
+
+  // Tier 1 pills
+  const tier1Html = `
+    <div class="food-filter-tier">
+      <span class="food-filter-tier-label">Service Line</span>
+      <button class="food-filter-btn${f.svc==='All'?' active':''}" onclick="setFoodFilterSvc('${a.id}','All')">All (${allOrders.length})</button>
+      ${svcSet.map(svc => {
+        const cnt = allOrders.filter(o=>(o.dept||'Other')===svc).length;
+        return `<button class="food-filter-btn${f.svc===svc?' active':''}" onclick="setFoodFilterSvc('${a.id}','${svc.replace(/'/g,"\\'")}')">
+          ${svc.replace('SEET - ','')} (${cnt})</button>`;
+      }).join('')}
+    </div>`;
+
+  // Tier 2 pills — only when a specific service line is chosen AND batches exist
+  const tier2Html = (f.svc !== 'All' && activeBatches.length) ? `
+    <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--purple);">
+      <span class="food-filter-tier-label">Batch</span>
+      <button class="food-filter-btn tier2${f.batch==='All'?' active':''}" onclick="setFoodFilterBatch('${a.id}','All')">All (${svcOrders.length})</button>
+      ${activeBatches.map(b => {
+        const cnt = svcOrders.filter(o => _nameBatch(o.name) === b.label).length;
+        return `<button class="food-filter-btn tier2${f.batch===b.label?' active':''}" onclick="setFoodFilterBatch('${a.id}','${b.label}')">
+          ${b.label}: ${b.range} (${cnt})</button>`;
+      }).join('')}
+    </div>` : '';
+
+  // Tier 3 pills — food options with count, only those > 0
+  const tier3Html = activeOptions.length ? `
+    <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--cyan);">
+      <span class="food-filter-tier-label">Food Option</span>
+      <button class="food-filter-btn tier3${f.foodOption==='All'?' active':''}" onclick="setFoodFilterOption('${a.id}','All')">All (${batchOrders.length})</button>
+      ${activeOptions.map(opt => `
+        <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
+          ${opt} (${optionCounts[opt]})</button>`).join('')}
+    </div>` : '';
 
   return `<div class="food-orders-panel" onclick="event.stopPropagation()">
     <div class="food-orders-header">
       <div>
         <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} order${visible.length !== 1 ? 's' : ''}${selected === 'All' ? '' : ` for ${selected}`}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} order${visible.length!==1?'s':''} shown</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-        ${orders.length ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="clearFoodOrders('${a.id}')">Clear</button>` : ''}
+        ${allOrders.length ? `<button class="btn btn-ghost btn-sm admin-only" style="color:var(--danger);border-color:var(--danger);" onclick="clearFoodOrders('${a.id}')">Clear</button>` : ''}
         ${assignee ? `<span style="font-size:11px;color:var(--muted);">Assigned to <strong style="color:var(--white);">${assignee}</strong></span>` : ''}
-        ${assignmentOption ? `<button class="btn btn-primary btn-sm admin-only" onclick="openFoodAssigneeModal('${a.id}','${assignmentOption.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
-        ${assignee ? `<button class="btn btn-sm admin-only" style="background:#25d366;color:#fff;border:none;font-weight:700;" onclick="notifyFoodAssignee('${a.id}','${assignmentOption.replace(/'/g,"\\'")}')">Notify Assignee in Group Chat</button>` : ''}
+        ${f.foodOption !== 'All' ? `<button class="btn btn-primary btn-sm admin-only" onclick="openFoodAssigneeModal('${a.id}','${f.foodOption.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
+        ${assignee ? `<button class="btn btn-sm admin-only" style="background:#25d366;color:#fff;border:none;font-weight:700;" onclick="notifyFoodAssignee('${a.id}','${f.foodOption.replace(/'/g,"\\'")}')">Notify Assignee</button>` : ''}
       </div>
     </div>
-    <div class="food-orders-filters">
-      <button class="food-filter-btn${selected === 'All' ? ' active' : ''}" onclick="setFoodOrderFilter('${a.id}','All')">All (${orders.length})</button>
-      ${meatGroups.map(mg => {
-        const count = orders.filter(o => meatKey(o.option) === mg).length;
-        return `<button class="food-filter-btn${selected === mg ? ' active' : ''}" onclick="setFoodOrderFilter('${a.id}','${mg.replace(/'/g,"\\'")}')">${mg} (${count})</button>`;
-      }).join('')}
-    </div>
-    <div class="food-order-list">
+    ${tier1Html}${tier2Html}${tier3Html}
+    <div class="food-order-list" style="margin-top:10px;">
       ${visible.length ? visible.map(order => `<div class="food-order-row">
         <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
-        <div style="font-size:12px;font-weight:600;color:var(--white);">${order.name}</div>
+        <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
         <div class="food-order-option">${order.option}</div>
-      </div>`).join('') : '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No food orders found for this option.</div>'}
+      </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No orders match the selected filters.</div>`}
     </div>
   </div>`;
 }
 
+// Legacy alias kept for clearFoodOrders re-render
 function setFoodOrderFilter(activityId, option) {
-  _foodOrderFilters[activityId] = option;
+  _getFoodFilter(activityId).foodOption = option;
   renderActivities();
 }
 
@@ -10498,7 +10607,7 @@ function renderSchedule() {
     rows.push(groups.slice(i, i + COLS_PER_ROW));
   }
 
-  let html = statsHtml + '<div class="sq-queue-wrap"><div class="sq-queue-container">';
+  let html = statsHtml + '<div class="sq-layout"><div class="sq-layout-queue"><div class="sq-queue-wrap"><div class="sq-queue-container">';
 
   const boxW = 170, arrowW = 52;
   const totalW = COLS_PER_ROW * boxW + (COLS_PER_ROW - 1) * arrowW;
@@ -10572,13 +10681,15 @@ function renderSchedule() {
     }
   });
 
-  html += '</div></div>'; // close sq-queue-container and sq-queue-wrap
+  html += '</div></div></div>'; // close sq-queue-container, sq-queue-wrap, sq-layout-queue
 
-  // ── Ungrouped Resources Panel ──
+  // ── Ungrouped Resources Panel (right side column) ──
+  const groupOptions = groups.map(g =>
+    `<option value="${g.id}">${g.name} (${(g.members||[]).length})</option>`
+  ).join('');
+
+  let ungroupedPanelHtml;
   if (ungrouped.length) {
-    const groupOptions = groups.map(g =>
-      `<option value="${g.id}">${g.name} (${(g.members||[]).length})</option>`
-    ).join('');
     const chipsHtml = ungrouped.map(p => {
       const initials = p.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
       return `<div class="sq-ungrouped-chip">
@@ -10590,29 +10701,32 @@ function renderSchedule() {
         </select>
       </div>`;
     }).join('');
-
-    html += `
+    ungroupedPanelHtml = `
     <div class="sq-ungrouped-panel">
       <div class="sq-ungrouped-header">
         <div class="sq-ungrouped-title">
-          👤 Ungrouped Resources
+          👤 Ungrouped
           <span class="sq-ungrouped-count">${ungrouped.length} ungrouped</span>
         </div>
-        <div class="sq-ungrouped-actions admin-only">
-          <button class="btn btn-ghost btn-sm" onclick="addAllUngroupedToGroups()" title="Distribute all ungrouped people randomly across existing groups">
-            Add All to Existing Groups
-          </button>
-          <button class="btn btn-ghost btn-sm" onclick="openAddSchedulerGroup()" title="Create a new custom group for these resources">
-            ＋ Create New Group
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="addUngroupedToRemainingSchedule()" title="Auto-create new groups for ungrouped people and add them to the schedule">
-            + Add to Remaining Schedule
-          </button>
+        <div class="sq-ungrouped-actions admin-only" style="flex-direction:column;align-items:stretch;width:100%;gap:6px;margin-top:8px;">
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="addAllUngroupedToGroups()">Add All to Existing Groups</button>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="openAddSchedulerGroup()">＋ Create New Group</button>
+          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="addUngroupedToRemainingSchedule()">+ Add to Remaining Schedule</button>
         </div>
       </div>
-      <div class="sq-ungrouped-grid">${chipsHtml}</div>
+      <div class="sq-ungrouped-grid" style="flex-direction:column;">${chipsHtml}</div>
+    </div>`;
+  } else {
+    ungroupedPanelHtml = `
+    <div class="sq-ungrouped-panel">
+      <div class="sq-ungrouped-header">
+        <div class="sq-ungrouped-title" style="color:var(--success);">✓ All Grouped</div>
+      </div>
+      <div style="padding:12px 18px;font-size:12px;color:var(--muted);">Everyone is assigned to a group.</div>
     </div>`;
   }
+
+  html += `<div class="sq-layout-side">${ungroupedPanelHtml}</div></div>`; // close sq-layout
 
   el.innerHTML = html;
 }
