@@ -7486,28 +7486,28 @@ function resolveNameFromEmail(name, email) {
 }
 
 // ──────────────────────────────────────────────
-// MONDAY.COM SYNC  — FoodClick board
+// MONDAY.COM SYNC  — Food Survey Board
 // ──────────────────────────────────────────────
 const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDEwOTc5MywiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wM1QxNDo1NTo0NS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.weYA2s4WeknqQ98PEwMExBRmbrZeIheIOLgb10mG_P0';
-const MONDAY_BOARD_ID  = '18419302361'; // FoodClick — food order form
+const MONDAY_BOARD_ID  = '18429833290'; // Food Survey Board
 
-// Column IDs for the FoodClick board
+// Column IDs for the Food Survey Board
 const MONDAY_COL_IDS = [
-  'emailf9193p88',       // Email
-  'short_text318zahz7',  // Nickname / preferred name
-  'multi_select5rdinahs', // Choose 2 Meat Dishes  (food option)
-  'single_selectog9dpzv', // Side dish
-  'single_selectdixgyxb', // 2 Shanghai or Buttered Chicken
-  'single_selectlojz2ae', // Dessert
+  'emailjefgq3je',        // Email
+  'single_selectw3y6kdg', // Service Line
+  'multi_selecttgo7p9s2', // Select your preferred Dish  (food option / meat)
+  'multi_select31gcf0e9', // Select your preferred Veggie
+  'single_selectktzksgz', // Select your Side Dish
+  'single_select0h7er2i', // Select your Dessert
 ];
 
 // Builds a human-readable food-option label from a row's column values
 function buildFoodOption(cols) {
-  const meat  = cols['multi_select5rdinahs']  || '';
-  const side  = cols['single_selectog9dpzv']  || '';
-  const extra = cols['single_selectdixgyxb']  || '';
-  const des   = cols['single_selectlojz2ae']  || '';
-  const parts = [meat, side, extra, des].filter(Boolean);
+  const dish   = cols['multi_selecttgo7p9s2'] || '';
+  const veggie = cols['multi_select31gcf0e9'] || '';
+  const side   = cols['single_selectktzksgz'] || '';
+  const des    = cols['single_select0h7er2i'] || '';
+  const parts  = [dish, veggie, side, des].filter(Boolean);
   return parts.length ? parts.join(' + ') : 'Food Option 1';
 }
 
@@ -7558,13 +7558,14 @@ function syncFromMonday() {
       item.column_values.forEach(cv => {
         cols[cv.id] = cv.text || '';
       });
-      const email    = cols['emailf9193p88'] || '';
-      const nickname = (cols['short_text318zahz7'] || '').trim();
-      // Resolve display name: prefer email-derived name, then nickname
-      let name = resolveNameFromEmail(item.name, email) || nickname;
+      const email = cols['emailjefgq3je'] || '';
+      const dept  = cols['single_selectw3y6kdg'] || 'Other';
+      // Name comes from the item's board name column (person typed their name)
+      let name = item.name.trim();
+      if (!name) name = resolveNameFromEmail(null, email);
       if (!name) return null;
       const option = buildFoodOption(cols);
-      return { id: item.id, name, option };
+      return { id: item.id, name, option, dept };
     }).filter(Boolean);
 
     if (!orders.length) {
