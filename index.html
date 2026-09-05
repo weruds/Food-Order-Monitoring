@@ -2309,6 +2309,49 @@
     }
   }
 
+  /* ── Meal type dropdown ── */
+  .meal-type-opt {
+    display: block; width: 100%; text-align: left;
+    padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 500;
+    background: none; border: none; cursor: pointer; color: var(--white);
+    transition: background .12s;
+  }
+  .meal-type-opt:hover { background: var(--surface2); }
+  .meal-type-opt.active { background: var(--accent-glow); color: var(--accent); font-weight: 700; }
+
+  /* ── FC Assignment cards ── */
+  .fca-member-btn {
+    padding: 7px 18px; border-radius: 20px; border: 1.5px solid var(--border2);
+    background: var(--surface); color: var(--muted); font: inherit; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .fca-member-btn.active {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    box-shadow: 0 2px 10px rgba(79,70,229,0.25);
+  }
+  .fca-order-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow .18s, transform .18s;
+  }
+  .fca-order-card:hover { box-shadow: 0 6px 24px rgba(79,70,229,0.12); transform: translateY(-2px); }
+  .fca-card-avatar {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+  }
+  .fca-card-name { font-size: 14px; font-weight: 700; color: var(--white); }
+  .fca-card-option {
+    font-size: 12px; color: var(--muted); line-height: 1.5;
+    background: var(--surface2); border-radius: 8px; padding: 8px 10px;
+    border-left: 3px solid var(--accent);
+  }
+  .fca-card-dept { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .6px; }
+
   /* ── Admin lock ── */
   /* When body has .admin-locked, hide all admin-only buttons/controls */
   body.admin-locked .admin-only { display: none !important; }
@@ -2853,6 +2896,9 @@
           <span class="nav-icon"></span> People
           <span class="nav-count" id="nav-count-people">0</span>
         </div>
+        <div class="nav-item" data-page="fc-assignments">
+          <span class="nav-icon">📋</span> FC Assignments
+        </div>
         <div class="nav-item" data-page="survey-results">
           <span class="nav-icon"></span> Survey Results
         </div>
@@ -2989,6 +3035,18 @@
           <div class="section-subtitle">Track food orders and confirmations across service lines</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <!-- Meal type dropdown -->
+          <div style="position:relative;display:inline-block;" id="meal-type-dropdown-wrap">
+            <button class="btn btn-ghost btn-sm" id="meal-type-btn" onclick="toggleMealTypeDropdown()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
+              <span id="meal-type-label">Set Dish Lunch</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4"/></svg>
+            </button>
+            <div id="meal-type-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:200;min-width:160px;overflow:hidden;">
+              <button onclick="chooseMealType('set','Set Dish Lunch')" class="meal-type-opt" id="mto-set">🍱 Set Dish Lunch</button>
+              <button onclick="chooseMealType('2dish','2 Dish Lunch')" class="meal-type-opt" id="mto-2dish">🍽️ 2 Dish Lunch</button>
+              <button onclick="chooseMealType('complete','Complete Lunch')" class="meal-type-opt" id="mto-complete">🥘 Complete Lunch</button>
+            </div>
+          </div>
           <button class="btn btn-sm admin-only" id="wa-notify-btn" onclick="sendFoodReadyNotification()" title="Notify WhatsApp group that distribution is good to go" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
             Distribution Good to Go!
@@ -2996,6 +3054,19 @@
         </div>
       </div>
       <div id="activities-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
+    <!-- ══════════════════ FC ASSIGNMENTS ══════════════════ -->
+    <div class="page" id="page-fc-assignments">
+      <div class="glow-line"></div>
+      <div class="section-header">
+        <div>
+          <div class="section-title">Food Committee Assignments</div>
+          <div class="section-subtitle">View orders assigned to each Group of the Week member for distribution</div>
+        </div>
+      </div>
+      <div id="fca-member-filters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;"></div>
+      <div id="fca-orders-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;"></div>
     </div>
 
     <!-- ══════════════════ BY QUARTER ══════════════════ -->
@@ -4586,43 +4657,45 @@ function initDate() {
 // NAVIGATION
 // ──────────────────────────────────────────────
 const PAGE_TITLES = {
-  dashboard:        'Dashboard',
-  activities:       'Food Orders Monitor',
-  quarters:         'By Quarter',
-  locations:        'Locations',
-  carseats:         'Car Seat Plan',
-  bedplan:          'Bed Plan',
-  games:            'Engagement Games',
-  committee:        'Organizing Committee',
-  grocery:          'Grocery List',
-  mealplan:         'Meal Plan',
-  schedule:         'Food Committee Schedule',
-  expenses:         'Expenses',
-  overview:         'Full Plan Overview',
-  people:           'People',
-  'survey-results': 'Survey Results',
-  survey:           'Feedback Survey',
-  'initial-survey': 'Initial Survey',
+  dashboard:           'Dashboard',
+  activities:          'Food Orders Monitor',
+  'fc-assignments':    'Food Committee Assignments',
+  quarters:            'By Quarter',
+  locations:           'Locations',
+  carseats:            'Car Seat Plan',
+  bedplan:             'Bed Plan',
+  games:               'Engagement Games',
+  committee:           'Organizing Committee',
+  grocery:             'Grocery List',
+  mealplan:            'Meal Plan',
+  schedule:            'Food Committee Schedule',
+  expenses:            'Expenses',
+  overview:            'Full Plan Overview',
+  people:              'People',
+  'survey-results':    'Survey Results',
+  survey:              'Feedback Survey',
+  'initial-survey':    'Initial Survey',
 };
 
 const ADD_LABELS = {
-  dashboard:        null,
-  activities:       null,
-  quarters:         null,
-  locations:        null,
-  carseats:         ['Add Car',         'modal-carseat'],
-  bedplan:          ['Add Room',        'modal-bed'],
-  games:            ['Add Game',        'modal-game'],
-  committee:        ['New Committee',   'modal-committee'],
-  grocery:          ['Add Item',        'modal-grocery'],
-  mealplan:         null,
-  schedule:         null,
-  expenses:         ['Add Expense',     'modal-expense'],
-  overview:         null,
-  people:           null,
-  'survey-results': null,
-  survey:           null,
-  'initial-survey': null,
+  dashboard:           null,
+  activities:          null,
+  'fc-assignments':    null,
+  quarters:            null,
+  locations:           null,
+  carseats:            ['Add Car',         'modal-carseat'],
+  bedplan:             ['Add Room',        'modal-bed'],
+  games:               ['Add Game',        'modal-game'],
+  committee:           ['New Committee',   'modal-committee'],
+  grocery:             ['Add Item',        'modal-grocery'],
+  mealplan:            null,
+  schedule:            null,
+  expenses:            ['Add Expense',     'modal-expense'],
+  overview:            null,
+  people:              null,
+  'survey-results':    null,
+  survey:              null,
+  'initial-survey':    null,
 };
 
 let currentPage = 'activities';
@@ -5665,6 +5738,127 @@ function themeBanner(a) {
   </div>`;
 }
 
+// ── Meal type dropdown: 'set' | '2dish' | 'complete'
+let _mealType = 'set';
+
+function setMealType(type) {
+  _mealType = type;
+  // Reset all filters when meal type changes
+  _foodFilters = {};
+  renderActivities();
+}
+
+function toggleMealTypeDropdown() {
+  const menu = document.getElementById('meal-type-menu');
+  if (!menu) return;
+  const open = menu.style.display === 'block';
+  menu.style.display = open ? 'none' : 'block';
+  if (!open) {
+    ['set','2dish','complete'].forEach(t => {
+      const el = document.getElementById('mto-' + t);
+      if (el) el.classList.toggle('active', t === _mealType);
+    });
+  }
+}
+
+function chooseMealType(type, label) {
+  const lbl = document.getElementById('meal-type-label');
+  if (lbl) lbl.textContent = label;
+  const menu = document.getElementById('meal-type-menu');
+  if (menu) menu.style.display = 'none';
+  setMealType(type);
+}
+
+// Close meal dropdown when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('meal-type-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const menu = document.getElementById('meal-type-menu');
+    if (menu) menu.style.display = 'none';
+  }
+});
+
+// ── FC Assignments state ──
+let _fcaSelectedMember = null;
+
+function renderFcAssignments() {
+  const filtersEl = document.getElementById('fca-member-filters');
+  const gridEl    = document.getElementById('fca-orders-grid');
+  if (!filtersEl || !gridEl) return;
+
+  const { current } = getSchedulerGroupStatus();
+  const members = current ? (current.members || []) : [];
+
+  if (!members.length) {
+    filtersEl.innerHTML = '';
+    gridEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">
+      No Group of the Week assigned yet.<br>
+      <span style="font-size:12px;color:var(--muted2);">Go to Food Committee Schedule to assign a current group.</span>
+    </div>`;
+    return;
+  }
+
+  // Auto-select first member if none selected or member not in current group
+  if (!_fcaSelectedMember || !members.find(m => m.id === _fcaSelectedMember)) {
+    _fcaSelectedMember = members[0].id;
+  }
+
+  // Member filter pills
+  filtersEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;">
+      <span style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.7px;">Group of the Week:</span>
+      ${members.map(m => `
+        <button class="fca-member-btn${_fcaSelectedMember === m.id ? ' active' : ''}"
+          onclick="selectFcaMember('${m.id}')">
+          ${m.name}
+        </button>`).join('')}
+    </div>`;
+
+  // Get all food orders from the default activity
+  const activity = (state.activities || [])[0];
+  const allOrders = activity ? getActivityFoodOrders(activity) : [];
+
+  if (!allOrders.length) {
+    gridEl.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">
+      No food orders synced yet. Use <strong>Sync from Monday</strong> on the Survey Results page.
+    </div>`;
+    return;
+  }
+
+  const selMember = members.find(m => m.id === _fcaSelectedMember);
+  const selName   = selMember ? selMember.name : '';
+
+  const avatarColors = ['#4f46e5','#9333ea','#0891b2','#059669','#f59e0b','#ef4444','#ec4899','#06b6d4'];
+  const colorOf = (name, offset) => avatarColors[((name || '').charCodeAt(0) + (offset||0)) % avatarColors.length];
+
+  gridEl.innerHTML = `
+    <div style="grid-column:1/-1;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;color:var(--muted);">
+        <strong style="color:var(--accent);">${selName}</strong> is handling
+        <strong style="color:var(--white);">${allOrders.length}</strong> order${allOrders.length!==1?'s':''}
+      </div>
+      <div style="font-size:11px;color:var(--muted2);">Click a member pill to switch view</div>
+    </div>
+    ${allOrders.map(order => `
+      <div class="fca-order-card">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="fca-card-avatar" style="background:linear-gradient(135deg,${colorOf(order.name,0)},${colorOf(order.name,3)});">
+            ${order.name.charAt(0).toUpperCase()}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="fca-card-name">${order.name}</div>
+            <div class="fca-card-dept">${(order.dept || 'Other').replace('SEET - ','')}</div>
+          </div>
+        </div>
+        <div class="fca-card-option">${order.option}</div>
+      </div>`).join('')}`;
+}
+
+function selectFcaMember(memberId) {
+  _fcaSelectedMember = memberId;
+  renderFcAssignments();
+}
+
 // ── Food Order filter state: { activityId: { svc, batch, foodOption } }
 let _foodFilters = {};
 let _foodAssigneeCtx = null;
@@ -5731,9 +5925,22 @@ function renderFoodOrdersPanel(a) {
 
   const f = _getFoodFilter(a.id);
 
+  // ── For Set Dish Lunch: filter by exact meal/set option (first segment) ──
+  // For 2 Dish Lunch and Complete Lunch: use full 3-tier cascade
+  const mealTypeLabel = _mealType === 'set' ? '🍱 Set Dish Lunch'
+    : _mealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
+
+  // Tier 0: meal type pre-filter (for Set Dish only — filter by first part of option)
+  const mealTypeOrders = _mealType === 'set'
+    ? allOrders.filter(o => {
+        const firstSeg = (o.option || '').split(' + ')[0].trim();
+        return firstSeg.toLowerCase().includes('set') || firstSeg.toLowerCase().includes('option');
+      })
+    : allOrders; // for 2dish and complete, show all (no pre-filter)
+
   // ── Tier 1: Service Lines (only those with orders) ──
-  const svcSet = [...new Set(allOrders.map(o => o.dept || 'Other'))].sort();
-  const svcOrders = f.svc === 'All' ? allOrders : allOrders.filter(o => (o.dept || 'Other') === f.svc);
+  const svcSet = [...new Set(mealTypeOrders.map(o => o.dept || 'Other'))].sort();
+  const svcOrders = f.svc === 'All' ? mealTypeOrders : mealTypeOrders.filter(o => (o.dept || 'Other') === f.svc);
 
   // ── Tier 2: Batches (only shown when a service line is selected; only those with members) ──
   const batchOrders = f.batch === 'All' ? svcOrders : svcOrders.filter(o => _nameBatch(o.name) === f.batch);
@@ -5789,7 +5996,10 @@ function renderFoodOrdersPanel(a) {
   return `<div class="food-orders-panel" onclick="event.stopPropagation()">
     <div class="food-orders-header">
       <div>
-        <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="font-size:14px;font-weight:700;color:var(--white);">Food Orders from People</div>
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--accent-glow);color:var(--accent);border:1px solid var(--accent3);">${mealTypeLabel}</span>
+        </div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px;">${visible.length} order${visible.length!==1?'s':''} shown</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
@@ -5916,20 +6126,21 @@ function renderActivityItem(a) {
 // RENDER PAGES
 // ──────────────────────────────────────────────
 function renderPage(page) {
-  if      (page === 'dashboard')  renderDashboard();
-  else if (page === 'activities') renderActivities();
-  else if (page === 'quarters')   renderQuarters();
-  else if (page === 'locations')  renderLocations();
-  else if (page === 'carseats')   renderCars();
-  else if (page === 'bedplan')    renderBeds();
-  else if (page === 'games')      renderGames();
-  else if (page === 'overview')   renderOverview();
-  else if (page === 'committee')  renderCommittee();
-  else if (page === 'grocery')    renderGrocery();
-  else if (page === 'mealplan')   renderMealPlan();
-  else if (page === 'schedule')   renderSchedule();
-  else if (page === 'people')     renderPeople();
-  else if (page === 'expenses')   renderExpensesPage();
+  if      (page === 'dashboard')       renderDashboard();
+  else if (page === 'activities')      renderActivities();
+  else if (page === 'fc-assignments')  renderFcAssignments();
+  else if (page === 'quarters')        renderQuarters();
+  else if (page === 'locations')       renderLocations();
+  else if (page === 'carseats')        renderCars();
+  else if (page === 'bedplan')         renderBeds();
+  else if (page === 'games')           renderGames();
+  else if (page === 'overview')        renderOverview();
+  else if (page === 'committee')       renderCommittee();
+  else if (page === 'grocery')         renderGrocery();
+  else if (page === 'mealplan')        renderMealPlan();
+  else if (page === 'schedule')        renderSchedule();
+  else if (page === 'people')          renderPeople();
+  else if (page === 'expenses')        renderExpensesPage();
   else if (page === 'survey-results')  renderSurveyResultsPage();
   else if (page === 'survey')          renderSurveyPage();
   else if (page === 'initial-survey')  renderInitialSurveyPage();
