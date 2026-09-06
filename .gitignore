@@ -8,3 +8,15 @@ Thumbs.db
 # Secrets
 .env
 *.env.local
+
+# Node.js dependencies and build output
+node_modules/
+dist/
+
+# WhatsApp session credentials
+.wwebjs_auth/
+.wwebjs_cache/
+*.db
+
+# Firebase local cache
+.firebase/hosting..cache

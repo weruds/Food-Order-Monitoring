@@ -397,14 +397,29 @@
   /* tier filter rows */
   .food-filter-tier { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; align-items: center; }
   .food-filter-tier-label { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .7px; margin-right: 4px; flex-shrink: 0; }
-  .food-filter-btn { padding: 5px 11px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .food-filter-btn { padding: 6px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; text-align:left; }
   .food-filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   .food-filter-btn.tier2.active { background: var(--purple); border-color: var(--purple); color: #fff; }
   .food-filter-btn.tier3.active { background: var(--cyan); border-color: var(--cyan); color: #fff; }
-  .food-order-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px; }
-  .food-order-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
-  .food-order-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg,var(--accent),var(--purple)); color: #fff; font-size: 12px; font-weight: 700; }
-  .food-order-option { margin-left: auto; font-size: 10px; font-weight: 700; color: var(--accent2); background: var(--accent-glow); border-radius: 12px; padding: 3px 7px; }
+  .food-filter-btn-lines { display:flex; flex-direction:column; gap:1px; }
+  .food-filter-btn-lines span { font-size:12px; font-weight:700; line-height:1.3; }
+  .food-filter-btn-count { font-size:11px; font-weight:600; opacity:0.75; margin-top:2px; }
+  .food-order-list { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .food-order-row {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 18px 10px 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    aspect-ratio: 1 / 1; text-align: center; transition: transform .15s, border-color .15s;
+  }
+  .food-order-row:hover { transform: translateY(-2px); border-color: var(--border2); }
+  .food-order-avatar { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg,var(--accent),var(--purple)); color: #fff; font-size: 16px; font-weight: 700; }
+  .food-order-name  { font-size: 13px; font-weight: 700; color: var(--white); line-height: 1.3; word-break: break-word; text-align:center; }
+  .food-order-option { display:flex; flex-direction:column; align-items:center; gap:3px; font-size:14px; font-weight:700; color: var(--accent2); background: var(--accent-glow); border-radius: 10px; padding: 8px 10px; margin-top: auto; width:100%; box-sizing:border-box; }
+  .food-order-option span { display:block; font-size:14px; font-weight:700; line-height:1.4; text-align:center; }
+  @media (max-width: 1200px) { .food-order-list { grid-template-columns: repeat(5, 1fr); } }
+  @media (max-width: 1000px) { .food-order-list { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 800px)  { .food-order-list { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px)  { .food-order-list { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 640px) { .food-orders-header { flex-direction: column; } }
   /* ── Theme banners ── */
   .theme-banner {
@@ -2346,21 +2361,24 @@
   }
   .fca-card-name { font-size: 14px; font-weight: 700; color: var(--white); }
   .fca-card-option {
-    font-size: 12px; color: var(--muted); line-height: 1.5;
-    background: var(--surface2); border-radius: 8px; padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 3px;
+    background: var(--surface2); border-radius: 8px; padding: 10px 12px;
     border-left: 3px solid var(--accent);
+  }
+  .fca-card-option span {
+    font-size: 14px; font-weight: 700; color: var(--white); line-height: 1.4;
   }
   .fca-card-dept { font-size: 10px; font-weight: 700; color: var(--muted2); text-transform: uppercase; letter-spacing: .6px; }
 
   /* ── Food Order Tiles (Survey Results) ── */
   .sr-food-tiles-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
   }
   .sr-food-tile {
     position: relative;
-    padding: 20px 18px 16px;
+    padding: 24px 20px 20px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
@@ -2368,26 +2386,31 @@
   }
   .sr-food-tile:hover { transform: translateY(-2px); border-color: var(--border2); }
   .sr-food-tile-accent {
-    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
   }
   .sr-food-tile-count {
-    font-size: 42px; font-weight: 900; line-height: 1; margin-bottom: 2px;
+    font-size: 56px; font-weight: 900; line-height: 1; margin-bottom: 2px;
     filter: drop-shadow(0 0 10px currentColor);
   }
   .sr-food-tile-pct {
-    font-size: 12px; font-weight: 700; opacity: 0.85; margin-bottom: 10px;
+    font-size: 14px; font-weight: 700; opacity: 0.85; margin-bottom: 14px;
   }
-  .sr-food-tile-label {
-    font-size: 12px; font-weight: 600; color: var(--white); line-height: 1.4;
-    margin-bottom: 12px; word-break: break-word;
+  .sr-food-tile-parts {
+    display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px;
+  }
+  .sr-food-tile-part {
+    font-size: 15px; font-weight: 700; color: var(--white); line-height: 1.35;
+    word-break: break-word;
   }
   .sr-food-tile-bar-wrap {
-    height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden;
+    height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden;
   }
   .sr-food-tile-bar {
-    height: 100%; border-radius: 2px; transition: width .3s ease;
+    height: 100%; border-radius: 3px; transition: width .3s ease;
   }
-  @media (max-width: 640px) { .sr-food-tiles-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 1100px) { .sr-food-tiles-grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 800px)  { .sr-food-tiles-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px)  { .sr-food-tiles-grid { grid-template-columns: repeat(2, 1fr); } }
 
   /* ── Admin lock ── */
   /* When body has .admin-locked, hide all admin-only buttons/controls */
@@ -3072,7 +3095,7 @@
           <div class="section-subtitle">Track food orders and confirmations across service lines</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <span id="meal-type-label" style="font-size:12px;font-weight:700;color:var(--muted);padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);">Set Dish Lunch</span>
+          <span id="meal-type-label" style="font-size:12px;font-weight:700;color:var(--muted);padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);">Set Dish Menu</span>
           <button class="btn btn-sm admin-only" id="wa-notify-btn" onclick="sendFoodReadyNotification()" title="Notify WhatsApp group that distribution is good to go" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
             Distribution Good to Go!
@@ -3091,9 +3114,13 @@
           <div class="section-subtitle">View orders assigned to each Group of the Week member for distribution</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-sm admin-only" onclick="sendFoodReadyNotification()" title="Notify WhatsApp group that food is ready for distribution" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
+          <button class="btn btn-sm admin-only" onclick="sendFoodReadyNotification()" title="Send assignment list to WhatsApp group" style="background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(37,211,102,0.30);display:flex;align-items:center;gap:6px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.122 1.533 5.854L0 24l6.335-1.509A11.946 11.946 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.796 9.796 0 01-5.001-1.371l-.359-.214-3.757.895.944-3.648-.234-.374A9.786 9.786 0 012.182 12C2.182 6.59 6.59 2.182 12 2.182S21.818 6.59 21.818 12 17.41 21.818 12 21.818z"/></svg>
             Notify Group
+          </button>
+          <button class="btn btn-sm admin-only" onclick="sendDistributionReadyNotification()" title="Notify group that distribution is ready to go" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;font-weight:700;box-shadow:0 3px 12px rgba(245,158,11,0.30);display:flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M1 3h15v13H1z" opacity=".3"/><path d="M21 8.5V15c0 1.1-.9 2-2 2H3.17L1.41 18.76C1.15 19.16 1 19.57 1 20c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V10l-2-1.5zM17 3H3c-1.1 0-2 .9-2 2v.17L17 16.83V5c0-1.1-.9-2-2-2zm4 3.5L23 8v8h-2V6.5z"/></svg>
+            Distribution is Ready to Go
           </button>
         </div>
       </div>
@@ -3379,13 +3406,13 @@
           <!-- SR Meal type dropdown -->
           <div style="position:relative;display:inline-block;" id="sr-meal-type-dropdown-wrap">
             <button class="btn btn-ghost btn-sm" id="sr-meal-type-btn" onclick="toggleSrMealTypeDropdown()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
-              <span id="sr-meal-type-label">Set Dish Lunch</span>
+              <span id="sr-meal-type-label">Set Dish Menu</span>
               <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M1 3l4 4 4-4"/></svg>
             </button>
             <div id="sr-meal-type-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow);z-index:200;min-width:160px;overflow:hidden;">
-              <button onclick="chooseSrMealType('set','Set Dish Lunch')" class="meal-type-opt" id="sr-mto-set">🍱 Set Dish Lunch</button>
-              <button onclick="chooseSrMealType('2dish','2 Dish Lunch')" class="meal-type-opt" id="sr-mto-2dish">🍽️ 2 Dish Lunch</button>
-              <button onclick="chooseSrMealType('complete','Complete Lunch')" class="meal-type-opt" id="sr-mto-complete">🥘 Complete Lunch</button>
+              <button onclick="chooseSrMealType('set','Set Dish Menu')" class="meal-type-opt" id="sr-mto-set">🍱 Set Dish Menu</button>
+              <button onclick="chooseSrMealType('2dish','2 Dish Menu')" class="meal-type-opt" id="sr-mto-2dish">🍽️ 2 Dish Menu</button>
+              <button onclick="chooseSrMealType('complete','Complete Lunch Set')" class="meal-type-opt" id="sr-mto-complete">🥘 Complete Lunch Set</button>
             </div>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="syncFromMonday()" title="Pull latest responses from Monday.com">Sync from Monday</button>
@@ -4390,8 +4417,8 @@ function initFirebase() {
   try {
     _fbApp    = firebase.apps.length ? firebase.app() : firebase.initializeApp(FB_FIRESTORE_CONFIG);
     _fbDb     = firebase.firestore(_fbApp);
-    // Force long-polling so Firestore works behind corporate proxies / strict firewalls
-    _fbDb.settings({ experimentalForceLongPolling: true, merge: true });
+    // Auto-detect long-polling — smarter fallback for corporate proxies / strict firewalls
+    _fbDb.settings({ experimentalAutoDetectLongPolling: true, merge: true });
     _fbDocRef = _fbDb.collection(FB_COLLECTION).doc(FB_DOC_ID);
 
     setFbStatus('syncing', 'Connecting…');
@@ -5789,8 +5816,8 @@ function setMealType(type) {
   _mealType = type;
   // Sync the read-only label on Monitor page
   const lbl = document.getElementById('meal-type-label');
-  if (lbl) lbl.textContent = _mealType === 'set' ? '🍱 Set Dish Lunch'
-    : _mealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
+  if (lbl) lbl.textContent = _mealType === 'set' ? '🍱 Set Dish Menu'
+    : _mealType === '2dish' ? '🍽️ 2 Dish Menu' : '🥘 Complete Lunch Set';
   // Reset all filters when meal type changes
   _foodFilters = {};
   renderActivities();
@@ -5828,11 +5855,14 @@ function renderFcAssignments() {
   const assignments = (activity && activity.distributionAssignments) || {};
 
   // Build per-member order lists based on distributionAssignments.
-  // Uses orderKey (meal-type-aware) so the same meal type selected on Survey Results applies here.
+  // Handles two assignment granularities:
+  //   1. Service Line level → key = svc        e.g. "SEET - Automation Sector" (2 Dish & Complete)
+  //   2. Food Option level  → key = orderKey() e.g. "Set 1" / "Dish 1"         (Set Dish)
   function ordersForMember(memberName) {
     return allOrders.filter(o => {
-      const key = orderKey(o);
-      return assignments[key] === memberName;
+      const svc = o.dept || 'Other';
+      return assignments[svc]          === memberName
+          || assignments[orderKey(o)]  === memberName;
     });
   }
 
@@ -5894,7 +5924,7 @@ function renderFcAssignments() {
             <div class="fca-card-dept">${(order.dept || 'Other').replace('SEET - ','')}</div>
           </div>
         </div>
-        <div class="fca-card-option">${orderKey(order)}</div>
+        <div class="fca-card-option">${orderKey(order).split(' + ').map(p => `<span>${p}</span>`).join('')}</div>
       </div>`).join('')}`;
 }
 
@@ -6029,12 +6059,18 @@ function renderFoodOrdersPanel(a) {
 
   const f = _getFoodFilter(a.id);
   const assignments = a.distributionAssignments || {};
-  const mealTypeLabel = _mealType === 'set' ? '🍱 Set Dish Lunch'
-    : _mealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
-  const isSet = _mealType === 'set';
+  const mealTypeLabel = _mealType === 'set' ? '🍱 Set Dish Menu'
+    : _mealType === '2dish' ? '🍽️ 2 Dish Menu' : '🥘 Complete Lunch Set';
+  const isSet      = _mealType === 'set';
+  const isComplete = _mealType === 'complete';
 
   // ── Exclude orders already assigned to a member ──
+  // Complete & 2 Dish: keyed at svc level. Set Dish: keyed at food option.
   const unassignedOrders = allOrders.filter(o => {
+    if (!isSet) {
+      const svc = o.dept || 'Other';
+      return !assignments[svc];
+    }
     const key = meatKey(o.option);
     return !assignments[key];
   });
@@ -6059,7 +6095,9 @@ function renderFoodOrdersPanel(a) {
         <button class="food-filter-btn tier3${f.foodOption==='All'?' active':''}" onclick="setFoodFilterOption('${a.id}','All')">All (${unassignedOrders.length})</button>
         ${activeOptions.map(opt => `
           <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
-            ${opt} (${optionCounts[opt]})</button>`).join('')}
+            <span class="food-filter-btn-lines">${opt.split(' + ').map(p=>`<span>${p}</span>`).join('')}</span>
+            <span class="food-filter-btn-count">(${optionCounts[opt]})</span>
+          </button>`).join('')}
       </div>` : '';
 
     return `<div class="food-orders-panel" onclick="event.stopPropagation()">
@@ -6080,34 +6118,23 @@ function renderFoodOrdersPanel(a) {
       <div class="food-order-list" style="margin-top:10px;">
         ${visible.length ? visible.map(order => `<div class="food-order-row">
           <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
-          <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
-          <div class="food-order-option">${orderDisplayLabel(order)}</div>
+          <div class="food-order-name">${order.name}</div>
+          <div class="food-order-option">${orderDisplayLabel(order).split(' + ').map(p=>`<span>${p}</span>`).join('')}</div>
         </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders for this option.</div>`}
       </div>
     </div>`;
   }
 
-  // ── 2 DISH / COMPLETE: full 3-tier cascade ──
-  const svcSet = [...new Set(unassignedOrders.map(o => o.dept || 'Other'))].sort();
-  const svcOrders = f.svc === 'All' ? unassignedOrders : unassignedOrders.filter(o => (o.dept || 'Other') === f.svc);
+  // ── 2 DISH / COMPLETE: Service Line + Batch cascade ──
+  const svcSet      = [...new Set(unassignedOrders.map(o => o.dept || 'Other'))].sort();
+  const svcOrders   = f.svc === 'All' ? unassignedOrders : unassignedOrders.filter(o => (o.dept || 'Other') === f.svc);
   const batchOrders = f.batch === 'All' ? svcOrders : svcOrders.filter(o => _nameBatch(o.name) === f.batch);
   const activeBatches = FOOD_BATCHES.filter(b => svcOrders.some(o => _nameBatch(o.name) === b.label));
 
-  const optionCounts = {};
-  batchOrders.forEach(o => {
-    const k = orderKey(o);
-    optionCounts[k] = (optionCounts[k] || 0) + 1;
-  });
-  const activeOptions = Object.keys(optionCounts).sort();
-  const visible = f.foodOption === 'All' ? batchOrders
-    : batchOrders.filter(o => orderKey(o) === f.foodOption);
+  // Assign button: appears at Service Line level for both 2 Dish and Complete Lunch
+  const svcAssignKey = f.svc !== 'All' ? f.svc : null;
 
-  // Assign button scopes: show at Service Line level OR Batch level OR Food Option level
-  const svcAssignKey   = f.svc !== 'All' && f.batch === 'All' && f.foodOption === 'All' ? f.svc : null;
-  const batchAssignKey = f.batch !== 'All' && f.foodOption === 'All' ? `${f.svc}__${f.batch}` : null;
-  const optAssignKey   = f.foodOption !== 'All' ? f.foodOption : null;
-
-  // Tier 1
+  // Tier 1 — Service Line
   const tier1Html = `
     <div class="food-filter-tier">
       <span class="food-filter-tier-label">Service Line</span>
@@ -6120,29 +6147,14 @@ function renderFoodOrdersPanel(a) {
       ${svcAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${svcAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
     </div>`;
 
-  // Tier 2
-  const tier2Html = (f.svc !== 'All' && activeBatches.length) ? `
-    <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--purple);">
-      <span class="food-filter-tier-label">Batch</span>
-      <button class="food-filter-btn tier2${f.batch==='All'?' active':''}" onclick="setFoodFilterBatch('${a.id}','All')">All (${svcOrders.length})</button>
-      ${activeBatches.map(b => {
-        const cnt = svcOrders.filter(o => _nameBatch(o.name) === b.label).length;
-        return `<button class="food-filter-btn tier2${f.batch===b.label?' active':''}" onclick="setFoodFilterBatch('${a.id}','${b.label}')">
-          ${b.label}: ${b.range} (${cnt})</button>`;
-      }).join('')}
-      ${batchAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${batchAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
-    </div>` : '';
+  // Tier 2 — Batch: hidden for both 2 Dish and Complete Lunch
+  const tier2Html = '';
 
-  // Tier 3
-  const tier3Html = activeOptions.length ? `
-    <div class="food-filter-tier" style="padding-left:8px;border-left:3px solid var(--cyan);">
-      <span class="food-filter-tier-label">Food Option</span>
-      <button class="food-filter-btn tier3${f.foodOption==='All'?' active':''}" onclick="setFoodFilterOption('${a.id}','All')">All (${batchOrders.length})</button>
-      ${activeOptions.map(opt => `
-        <button class="food-filter-btn tier3${f.foodOption===opt?' active':''}" onclick="setFoodFilterOption('${a.id}','${opt.replace(/'/g,"\\'")}')">
-          ${opt} (${optionCounts[opt]})</button>`).join('')}
-      ${optAssignKey ? `<button class="btn btn-primary btn-sm admin-only" style="margin-left:6px;" onclick="openFoodAssigneeModal('${a.id}','${optAssignKey.replace(/'/g,"\\'")}')">Assign for Distribution</button>` : ''}
-    </div>` : '';
+  // Tier 3 — Food Option: hidden for both 2 Dish and Complete Lunch
+  const tier3Html = '';
+
+  // visible cards: always svc-filtered for non-set meal types
+  const visible = svcOrders;
 
   return `<div class="food-orders-panel" onclick="event.stopPropagation()">
     <div class="food-orders-header">
@@ -6161,8 +6173,8 @@ function renderFoodOrdersPanel(a) {
     <div class="food-order-list" style="margin-top:10px;">
       ${visible.length ? visible.map(order => `<div class="food-order-row">
         <div class="food-order-avatar">${order.name.charAt(0).toUpperCase()}</div>
-        <div style="font-size:12px;font-weight:600;color:var(--white);flex:1;min-width:0;">${order.name}</div>
-        <div class="food-order-option">${orderDisplayLabel(order)}</div>
+        <div class="food-order-name">${order.name}</div>
+        <div class="food-order-option">${orderDisplayLabel(order).split(' + ').map(p=>`<span>${p}</span>`).join('')}</div>
       </div>`).join('') : `<div style="font-size:12px;color:var(--muted);padding:8px 0;">No unassigned orders match the selected filters.</div>`}
     </div>
   </div>`;
@@ -6806,7 +6818,7 @@ function importPeopleFromSurvey() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': MONDAY_API_TOKEN,
+      'Authorization': `Bearer ${MONDAY_API_TOKEN}`,
       'API-Version': '2024-01',
     },
     body: JSON.stringify({ query }),
@@ -7305,8 +7317,8 @@ function renderFoodOrderTiles() {
     </div>`;
   }
 
-  const mealTypeLabel = _srMealType === 'set' ? '🍱 Set Dish Lunch'
-    : _srMealType === '2dish' ? '🍽️ 2 Dish Lunch' : '🥘 Complete Lunch';
+  const mealTypeLabel = _srMealType === 'set' ? '🍱 Set Dish Menu'
+    : _srMealType === '2dish' ? '🍽️ 2 Dish Menu' : '🥘 Complete Lunch Set';
 
   // Helper: compute a display key for an order based on SR meal type
   function srOrderKey(order) {
@@ -7346,12 +7358,17 @@ function renderFoodOrderTiles() {
   const tilesHtml = entries.map(([label, count], i) => {
     const c = TILE_COLORS[i % TILE_COLORS.length];
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    // Split "Dish 1 + Veg 1 + Des 1" into individual lines
+    const parts = label.split(' + ').filter(Boolean);
+    const partsHtml = parts.map(p =>
+      `<div class="sr-food-tile-part">${p}</div>`
+    ).join('');
     return `
       <div class="sr-food-tile" style="border-color:${c.border};background:linear-gradient(160deg,${c.bg} 0%,var(--surface) 60%);">
         <div class="sr-food-tile-accent" style="background:${c.accent};"></div>
         <div class="sr-food-tile-count" style="color:${c.accent};">${count}</div>
         <div class="sr-food-tile-pct" style="color:${c.accent};">${pct}%</div>
-        <div class="sr-food-tile-label">${label}</div>
+        <div class="sr-food-tile-parts">${partsHtml}</div>
         <div class="sr-food-tile-bar-wrap">
           <div class="sr-food-tile-bar" style="width:${pct}%;background:${c.accent};"></div>
         </div>
@@ -7551,7 +7568,7 @@ function resolveNameFromEmail(name, email) {
 // ──────────────────────────────────────────────
 // MONDAY.COM SYNC  — Food Survey Board
 // ──────────────────────────────────────────────
-const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDEwOTc3MywiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wM1QxNDo1NTo0NS4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.weYA2s4WeknqQ98PEwMExBRmbrZeIheIOLgb10mG_P0';
+const MONDAY_API_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjcwMDg1NzkxNiwiYWFpIjoxMSwidWlkIjo2Njc0NjIyOSwiaWFkIjoiMjAyNi0wOS0wNVQxNjo1MTo1Ni4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MTM1MzY5ODEsInJnbiI6InVzZTEifQ.becrvW7xypdHlhS2nDkgbgR4Ab-rZArdO4JDGug-DxU';
 
 // ── WhatsApp Bot API ──────────────────────────────────────────────────────────
 // After deploying to Railway, replace the URL below with your Railway public URL.
@@ -7606,7 +7623,7 @@ function syncFromMonday() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': MONDAY_API_TOKEN,
+      'Authorization': `Bearer ${MONDAY_API_TOKEN}`,
       'API-Version': '2024-01',
     },
     body: JSON.stringify({ query }),
@@ -7665,7 +7682,7 @@ function syncFromMonday() {
   })
   .catch(err => {
     console.error('Monday.com fetch error:', err);
-    showToast('Could not reach Monday.com API.');
+    showToast(`Monday.com error: ${err.message || err}. Check console for details.`);
   });
 }
 
@@ -7700,14 +7717,60 @@ function resetSurveyData() {
 // ──────────────────────────────────────────────
 // WHATSAPP NOTIFICATION
 // ──────────────────────────────────────────────
+
+// Builds { name, orders[] } list from current state for all Group-of-the-Week members
+function _buildAssigneePayload() {
+  const { current } = getSchedulerGroupStatus();
+  const members = current ? (current.members || []) : [];
+  const activity = (state.activities || [])[0];
+  const allOrders = activity ? getActivityFoodOrders(activity) : [];
+  const assignments = (activity && activity.distributionAssignments) || {};
+
+  return members.map(m => {
+    const orders = allOrders
+      .filter(o => {
+        const svc = o.dept || 'Other';
+        return assignments[svc]         === m.name
+            || assignments[orderKey(o)] === m.name;
+      })
+      .map(o => `${o.name} — ${orderKey(o)}`);
+    return { name: m.name, orders };
+  }).filter(a => a.orders.length > 0);
+}
+
+// Notify Group — sends the full assignment list to the WhatsApp group
 function sendFoodReadyNotification() {
+  const assignees = _buildAssigneePayload();
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
   fetch(`${WA_BOT_URL}/notify-group`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-secret': WA_BOT_SECRET },
+    body: JSON.stringify({ date: dateStr, assignees }),
+  })
+  .then(r => {
+    if (r.ok) {
+      showToast('✅ Assignment list sent to WhatsApp group!');
+    } else {
+      r.json().catch(() => ({})).then(body => {
+        showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
+      });
+    }
+  })
+  .catch(() => {
+    showToast('❌ Cannot reach WhatsApp Bot. Make sure it is running on your PC (npm start).');
+  });
+}
+
+// Distribution is Ready to Go — sends a separate "ready" alert to the group
+function sendDistributionReadyNotification() {
+  fetch(`${WA_BOT_URL}/notify-distribution`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-secret': WA_BOT_SECRET },
   })
   .then(r => {
     if (r.ok) {
-      showToast('✅ Group notified via WhatsApp!');
+      showToast('✅ Distribution-ready alert sent to WhatsApp group!');
     } else {
       r.json().catch(() => ({})).then(body => {
         showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
@@ -7735,7 +7798,7 @@ function debugMondayColumns() {
   }`;
   fetch('https://api.monday.com/v2', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': MONDAY_API_TOKEN, 'API-Version': '2024-01' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${MONDAY_API_TOKEN}`, 'API-Version': '2024-01' },
     body: JSON.stringify({ query }),
   })
   .then(r => r.json())

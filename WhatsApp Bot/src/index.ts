@@ -56,6 +56,21 @@ async function connect(): Promise<void> {
     if (connection === 'open') {
       isConnected = true;
       console.log('[WhatsApp] Client is ready!');
+
+      // Print all group JIDs so you can verify FOOD_GROUP_ID in .env
+      setTimeout(async () => {
+        try {
+          const groups = await sock!.groupFetchAllParticipating();
+          const ids = Object.keys(groups);
+          if (ids.length) {
+            console.log('\n[Setup] Groups this account is in:');
+            ids.forEach(id => console.log(`  "${groups[id].subject}"  →  ${id}`));
+            console.log('');
+          }
+        } catch {
+          // not critical
+        }
+      }, 3000);
     }
 
     if (connection === 'close') {

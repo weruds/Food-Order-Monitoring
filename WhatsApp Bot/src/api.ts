@@ -63,7 +63,61 @@ You can view them on Food Committee Assignment Tab
   });
 
   // ── POST /notify-group ────────────────────────────────────────────────────────
-  app.post('/notify-group', auth, async (_req: Request, res: Response) => {
+  // Body: { date: "September 4, 2026", assignees: [{ name: "John", orders: ["Alice - Meal A", "Bob - Meal B"] }] }
+  app.post('/notify-group', auth, async (req: Request, res: Response) => {
+    const groupId = process.env.FOOD_GROUP_ID;
+    if (!groupId) {
+      res.status(503).json({ error: 'FOOD_GROUP_ID not configured in .env' });
+      return;
+    }
+
+    const sock = getSocket();
+    if (!sock || !getBotConnected()) {
+      res.status(503).json({ error: 'WhatsApp bot not connected yet' });
+      return;
+    }
+
+    const { date, assignees } = req.body as {
+      date?: string;
+      assignees?: { name: string; orders: string[] }[];
+    };
+
+    const divider = '___________________';
+
+    let assigneeBlock = '';
+    if (assignees && assignees.length) {
+      assigneeBlock = assignees.map(a => {
+        const orderLines = a.orders.length
+          ? a.orders.map(o => `  • ${o}`).join('\n')
+          : '  (no orders assigned)';
+        return `*${a.name}*\n${orderLines}`;
+      }).join(`\n${divider}\n`);
+    }
+
+    const message =
+`Hi Team! 😊 Here are your assignments for Lunch Distribution for today: *${date || new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}*
+
+${divider}
+${assigneeBlock}
+${divider}
+
+Another notification will be sent to you later on, so watch out! 👀
+
+— *admin*`;
+
+    try {
+      await sock.sendMessage(groupId, { text: message });
+      console.log('[API] Group assignment notification sent.');
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[API] Failed to send group notification:', err);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
+  });
+
+  // ── POST /notify-distribution ─────────────────────────────────────────────────
+  // Sent when distribution is actually ready. Simple "ready to go" message.
+  app.post('/notify-distribution', auth, async (_req: Request, res: Response) => {
     const groupId = process.env.FOOD_GROUP_ID;
     if (!groupId) {
       res.status(503).json({ error: 'FOOD_GROUP_ID not configured in .env' });
@@ -77,16 +131,18 @@ You can view them on Food Committee Assignment Tab
     }
 
     const message =
-`Hi Team, Food is now ready for Distribution. Please check your assignments and distribute in an orderly manner.
+`🍱 *Distribution is Ready to Go!*
 
--admin`;
+Hey team, food is now ready for pick-up and distribution. Please proceed accordingly and distribute in an orderly manner. Let's go! 💪
+
+— *admin*`;
 
     try {
       await sock.sendMessage(groupId, { text: message });
-      console.log('[API] Group distribution notification sent.');
+      console.log('[API] Distribution-ready notification sent.');
       res.json({ ok: true });
     } catch (err) {
-      console.error('[API] Failed to send group notification:', err);
+      console.error('[API] Failed to send distribution-ready notification:', err);
       res.status(500).json({ error: 'Failed to send message' });
     }
   });
