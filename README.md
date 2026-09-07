@@ -533,6 +533,240 @@ Set-Location ..
 git diff --check
 ```
 
+## 17. Setting up on another desktop
+
+Follow these steps on any new Windows computer that needs to run the dashboard and WhatsApp Bot locally.
+
+> **How the setup works:** The dashboard is a plain `index.html` file — just open it in a browser. The WhatsApp Bot is a separate Node.js service that runs in a terminal. Both run on the same PC. The Notify buttons in the dashboard call the bot at `http://localhost:3333`, so no extra tools like ngrok are needed.
+
+### Prerequisites
+
+Install these once on the new PC. Skip any that are already installed.
+
+| Tool | Where to get it |
+| --- | --- |
+| **Node.js 20 LTS** | https://nodejs.org — click the LTS installer, or use `winget` (see below) |
+
+**Option A — installer (recommended for first-timers):**
+Go to https://nodejs.org, download the LTS installer, and run it. Accept all defaults and make sure **"Add to PATH"** remains checked.
+
+**Option B — winget (Windows Package Manager, faster):**
+Open PowerShell as Administrator and run:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+`winget` is built into Windows 10 (1709+) and Windows 11. If the command is not found, update the App Installer from the Microsoft Store first.
+
+After installing Node.js, **close and reopen PowerShell**, then verify:
+
+```powershell
+node --version   # v20.x.x or newer
+npm --version    # 10.x.x or newer
+```
+
+If these commands are not recognized, see §18 Troubleshooting below.
+
+### Step 1 — Get the project files
+
+Copy the entire `ODC SEET Food Order Monitoring` folder from the main machine to the new PC. Place it anywhere — for example `C:\DIM\ODC SEET Food Order Monitoring`.
+
+You can skip the `node_modules` and `dist` folders when copying; they will be regenerated.
+
+### Step 2 — Open a terminal in the bot folder
+
+```powershell
+cd "C:\DIM\ODC SEET Food Order Monitoring\WhatsApp Bot"
+```
+
+Confirm you are in the right place:
+
+```powershell
+Get-ChildItem package.json
+```
+
+This should show `package.json`. If it shows an error, you are in the wrong folder.
+
+### Step 3 — Install dependencies
+
+```powershell
+npm install
+```
+
+After `npm install` finishes, approve the post-install scripts for the two packages that require it:
+
+```powershell
+npm approve-scripts @whiskeysockets/baileys protobufjs
+```
+
+You will see output like:
+
+```
+Approved @whiskeysockets/baileys:
+  added @whiskeysockets/baileys@6.7.x
+Approved protobufjs:
+  added protobufjs@7.x.x
+```
+
+### Step 4 — Create the .env file
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+Fill in the values exactly as shown (ask Wilson if you are unsure of the secret):
+
+```env
+SESSION_DATA_PATH=./.wwebjs_auth
+FOOD_GROUP_ID=120363411910061717@g.us
+API_PORT=3333
+API_SECRET=odc-seet-wa-bot-2026
+```
+
+Save and close Notepad.
+
+### Step 5 — Build and start the bot
+
+```powershell
+npm run build
+npm start
+```
+
+`npm run build` compiles the TypeScript source. It should finish silently with no errors.
+
+`npm start` launches the bot. You will see:
+
+```
+[Boot] Starting WhatsApp Bot (Baileys)…
+[API] HTTP server listening on 0.0.0.0:3333
+```
+
+### Step 6 — Scan the QR code (first run only)
+
+On the first run the bot prints a QR URL:
+
+```
+[Auth] Open this URL in your browser to scan the QR:
+[Auth] https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=...
+```
+
+Open that URL in any browser. A QR image will appear. Scan it from WhatsApp on your phone (the dedicated bot account, not your personal number). Wait for:
+
+```
+[WhatsApp] Client is ready!
+```
+
+After this, the terminal also lists all groups the account is in. The bot is now connected. The `.wwebjs_auth` folder stores the session — do not delete it or you will need to scan again.
+
+> Subsequent runs will connect automatically without a QR scan, as long as `.wwebjs_auth` is intact.
+
+### Step 7 — Open the dashboard
+
+Double-click `index.html` in the `ODC SEET Food Order Monitoring` folder, or open it in the browser:
+
+```powershell
+Start-Process "C:\DIM\ODC SEET Food Order Monitoring\index.html"
+```
+
+The dashboard reads `WA_BOT_URL = 'http://localhost:3333'` by default, which points to the bot running on the same machine. The Notify buttons will work immediately.
+
+### Step 8 — Verify the connection
+
+In any browser tab, open:
+
+```
+http://localhost:3333/health
+```
+
+Expected response:
+
+```json
+{ "status": "ok", "bot": "connected" }
+```
+
+If `bot` shows `"not ready"`, wait a few more seconds for WhatsApp to finish connecting and refresh.
+
+---
+
+## 18. Troubleshooting — desktop setup
+
+### `node` or `npm` is not recognized after installing Node.js
+
+Node.js was installed but the terminal was not restarted. **Close PowerShell completely and open a new window.** Then retry:
+
+```powershell
+node --version
+npm --version
+```
+
+If still not recognized, Node.js may not have been added to `PATH` during install. Run the Node.js installer again and ensure the option **"Add to PATH"** is checked. Then restart PowerShell.
+
+### `npm install` fails or hangs
+
+Make sure you are inside the `WhatsApp Bot` folder, not the project root:
+
+```powershell
+cd "C:\DIM\ODC SEET Food Order Monitoring\WhatsApp Bot"
+Get-ChildItem package.json   # must show a result
+npm install
+```
+
+Running `npm install` from the wrong folder will produce errors or install nothing useful.
+
+### `npm approve-scripts` gives a PowerShell error about angle brackets
+
+PowerShell treats `<pkg>` as a redirect operator. Always use the actual package names, not placeholders:
+
+```powershell
+npm approve-scripts @whiskeysockets/baileys protobufjs
+```
+
+### `npm run build` reports TypeScript errors
+
+You may be on an older Node.js version. Verify `node --version` reports `v20` or higher. If not, download and install Node.js 20 LTS, restart PowerShell, and try again.
+
+### Bot starts but prints decrypt errors on first run
+
+Errors like `MessageCounterError: Key used already or never filled` or `Error: Bad MAC` appear when the session folder has stale signal keys from a previous session. This is normal on the first run after copying session files from another machine. Baileys fixes itself automatically and the bot connects despite these messages. Wait for `[WhatsApp] Client is ready!` — if that line appears, the bot is working.
+
+If the errors keep repeating and `[WhatsApp] Client is ready!` never appears, delete the old session files and re-authenticate via QR:
+
+```powershell
+Remove-Item -Recurse -Force "C:\DIM\ODC SEET Food Order Monitoring\WhatsApp Bot\.wwebjs_auth"
+npm start
+```
+
+### Bot prints `[WhatsApp] Client is ready!` but Notify buttons do nothing
+
+1. Confirm the dashboard was opened from the **local file system** (`file:///...`), not from `seet-order-management.web.app`. The hosted site cannot call `http://localhost:3333`.
+2. Check `http://localhost:3333/health` in the browser — it should return `"bot":"connected"`.
+3. Open the browser DevTools console (F12) while clicking Notify. Look for a network error or a red message. A CORS or `net::ERR_CONNECTION_REFUSED` error means the bot is not running or is on a different port.
+
+### Notify button shows `❌ Bot error: Unauthorized`
+
+The `API_SECRET` in `.env` does not match `WA_BOT_SECRET` in `index.html`. Both must be the same string. Check `.env` and confirm the value matches `odc-seet-wa-bot-2026` (or whatever the current secret is).
+
+### Notify button shows `❌ Bot error: FOOD_GROUP_ID not configured`
+
+The `FOOD_GROUP_ID` line is missing or empty in `.env`. Set it to the correct group JID. The correct value for the Food Committee Admin Monitoring group is `120363411910061717@g.us`. If unsure, start the bot — it prints all group JIDs after connecting.
+
+### QR code URL appears but scanning does nothing
+
+- Make sure you are scanning from the **bot's dedicated WhatsApp account**, not your personal account.
+- The QR expires after about 60 seconds. If it expired, restart `npm start` to generate a fresh one.
+- If the phone shows "This QR code has already been scanned", the session folder has a stale or partial state. Stop the bot, delete the session folder, and restart:
+
+```powershell
+Remove-Item -Recurse -Force "C:\DIM\ODC SEET Food Order Monitoring\WhatsApp Bot\.wwebjs_auth"
+npm start
+```
+
+A fresh QR URL will be printed. Scan it again from WhatsApp.
+
+---
+
 ## License
 
 Internal ODC SEET project. Add a formal license if this project will be distributed outside the organization.
