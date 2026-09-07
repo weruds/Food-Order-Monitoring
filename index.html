@@ -5966,7 +5966,11 @@ function notifyFcaMember(activityId, memberName) {
       showToast(`✅ WhatsApp message sent to ${memberName}`);
     } else {
       r.json().catch(() => ({})).then(body => {
-        showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
+        if (r.status === 404) {
+          showToast(`❌ ${body.error || `${memberName}'s number is not on WhatsApp`}`);
+        } else {
+          showToast(`❌ Bot error: ${body.error || r.status}. Is the bot running?`);
+        }
       });
     }
   })

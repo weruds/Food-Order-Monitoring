@@ -13,40 +13,40 @@ dotenv.config();
 const API_PORT   = parseInt(process.env.PORT ?? process.env.API_PORT ?? '3333', 10);
 const API_SECRET = process.env.API_SECRET ?? '';
 
-// ── Retry helper ─────────────────────────────────────────────────────────────
-// Baileys can time out (408) resolving a recipient's devices, especially for
-// DM sends. Retry up to maxAttempts times with an exponential back-off before
-// giving up, and surface a 504 so the caller knows it was a gateway timeout.
-const SEND_MAX_ATTEMPTS = 3;
-const SEND_RETRY_DELAY_MS = 3000;
+// ── Send helpers ──────────────────────────────────────────────────────────────
 
-async function sendWithRetry(
-  jid: string,
+// Verify a phone number is registered on WhatsApp before sending.
+// Returns the canonical JID string, or null if not found.
+async function resolveJid(phone: string): Promise<string | null> {
+  const sock = getSocket();
+  if (!sock) return null;
+  try {
+    const results = await sock.onWhatsApp(phone);
+    const hit = results?.find(r => r.exists);
+    return hit ? hit.jid : null;
+  } catch {
+    return null;
+  }
+}
+
+async function sendDM(
+  phone: string,
   content: AnyMessageContent,
   label: string,
-): Promise<void> {
+): Promise<{ jid: string }> {
   const sock = getSocket();
   if (!sock) throw new Error('socket unavailable');
 
-  for (let attempt = 1; attempt <= SEND_MAX_ATTEMPTS; attempt++) {
-    try {
-      await sock.sendMessage(jid, content);
-      return; // success
-    } catch (err: any) {
-      const isTimeout =
-        err?.output?.statusCode === 408 ||
-        (err?.message ?? '').toLowerCase().includes('timed out');
-
-      if (isTimeout && attempt < SEND_MAX_ATTEMPTS) {
-        console.warn(
-          `[API] ${label} — attempt ${attempt} timed out, retrying in ${SEND_RETRY_DELAY_MS}ms…`,
-        );
-        await new Promise(r => setTimeout(r, SEND_RETRY_DELAY_MS * attempt));
-        continue;
-      }
-      throw err; // non-timeout error or final attempt — bubble up
-    }
+  const jid = await resolveJid(phone);
+  if (!jid) {
+    const err: any = new Error(`${phone} is not registered on WhatsApp`);
+    err.notFound = true;
+    throw err;
   }
+
+  await sock.sendMessage(jid, content);
+  console.log(`[API] ${label} sent → ${jid}`);
+  return { jid };
 }
 
 export function startApi(): void {
@@ -94,18 +94,16 @@ You can view them on Food Committee Assignment Tab
 -admin`;
 
     try {
-      const jid = `${phone.replace(/\D/g, '')}@s.whatsapp.net`;
-      await sendWithRetry(jid, { text: message }, `notify-assignee → ${name}`);
-      console.log(`[API] Assignee notification sent → ${name} (${phone})`);
+      const cleanPhone = phone.replace(/\D/g, '');
+      await sendDM(cleanPhone, { text: message }, `notify-assignee → ${name}`);
       res.json({ ok: true });
     } catch (err: any) {
       console.error('[API] Failed to send assignee notification:', err);
-      const isTimeout =
-        err?.output?.statusCode === 408 ||
-        (err?.message ?? '').toLowerCase().includes('timed out');
-      res
-        .status(isTimeout ? 504 : 500)
-        .json({ error: isTimeout ? 'WhatsApp gateway timed out — please retry' : 'Failed to send message' });
+      if (err.notFound) {
+        res.status(404).json({ error: `${phone} is not registered on WhatsApp` });
+      } else {
+        res.status(500).json({ error: 'Failed to send message' });
+      }
     }
   });
 
@@ -153,17 +151,12 @@ Another notification will be sent to you later on, so watch out! 👀
 — *admin*`;
 
     try {
-      await sendWithRetry(groupId, { text: message }, 'notify-group');
+      await sock.sendMessage(groupId, { text: message });
       console.log('[API] Group assignment notification sent.');
       res.json({ ok: true });
     } catch (err: any) {
       console.error('[API] Failed to send group notification:', err);
-      const isTimeout =
-        err?.output?.statusCode === 408 ||
-        (err?.message ?? '').toLowerCase().includes('timed out');
-      res
-        .status(isTimeout ? 504 : 500)
-        .json({ error: isTimeout ? 'WhatsApp gateway timed out — please retry' : 'Failed to send message' });
+      res.status(500).json({ error: 'Failed to send message' });
     }
   });
 
@@ -190,17 +183,12 @@ Hey team, food is now ready for pick-up and distribution. Please proceed accordi
 — *admin*`;
 
     try {
-      await sendWithRetry(groupId, { text: message }, 'notify-distribution');
+      await sock.sendMessage(groupId, { text: message });
       console.log('[API] Distribution-ready notification sent.');
       res.json({ ok: true });
     } catch (err: any) {
       console.error('[API] Failed to send distribution-ready notification:', err);
-      const isTimeout =
-        err?.output?.statusCode === 408 ||
-        (err?.message ?? '').toLowerCase().includes('timed out');
-      res
-        .status(isTimeout ? 504 : 500)
-        .json({ error: isTimeout ? 'WhatsApp gateway timed out — please retry' : 'Failed to send message' });
+      res.status(500).json({ error: 'Failed to send message' });
     }
   });
 
