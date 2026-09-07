@@ -1,3 +1,8 @@
+/**
+ * ODC SEET Food Order Monitoring — WhatsApp Bot
+ * Developed and created by: Wilson Serquina
+ * September 2026
+ */
 import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
@@ -5,6 +10,7 @@ import makeWASocket, {
   makeCacheableSignalKeyStore,
   WASocket,
 } from '@whiskeysockets/baileys';
+import qrcode from 'qrcode-terminal';
 import { Boom } from '@hapi/boom';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -33,7 +39,7 @@ async function connect(): Promise<void> {
       keys: makeCacheableSignalKeyStore(state.keys, logger),
     },
     logger,
-    printQRInTerminal: false, // we handle QR ourselves
+    printQRInTerminal: false,
     browser: ['Food Committee Bot', 'Chrome', '120.0'],
     generateHighQualityLinkPreview: false,
   });
@@ -46,11 +52,8 @@ async function connect(): Promise<void> {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
-      const encoded = encodeURIComponent(qr);
-      console.log('\n[Auth] ══════════════════════════════════════════════');
-      console.log('[Auth] Open this URL in your browser to scan the QR:');
-      console.log(`[Auth] https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}`);
-      console.log('[Auth] ══════════════════════════════════════════════\n');
+      console.log('\n[Auth] Scan this QR code with WhatsApp (Linked Devices → Link a Device):\n');
+      qrcode.generate(qr, { small: true });
     }
 
     if (connection === 'open') {
